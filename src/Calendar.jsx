@@ -120,13 +120,20 @@ function Calendar({ onClose }) {
     });
   }
 
+  // Helper to trigger haptic feedback
+  function triggerHaptic() {
+    if (navigator.vibrate) {
+      navigator.vibrate([30]); // short pulse
+    }
+  }
+
   return (
     <div style={{ background: '#181818', borderRadius: 12, boxShadow: '0 0 8px #0ff2', color: '#eee', position: 'relative', padding: '1.5rem', margin: 0 }}>
       <h3 style={{ color: '#ffd9e3', marginBottom: 12, textAlign: 'center' }}>🗓️ Calendar</h3>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, position: 'relative' }}>
-        <button onClick={() => setCurrentMonth(m => ({ year: m.month === 0 ? m.year - 1 : m.year, month: m.month === 0 ? 11 : m.month - 1 }))} style={navBtnStyle}>&lt;</button>
+        <button onClick={() => { triggerHaptic(); setCurrentMonth(m => ({ year: m.month === 0 ? m.year - 1 : m.year, month: m.month === 0 ? 11 : m.month - 1 })); }} style={navBtnStyle}>&lt;</button>
         <span style={{ fontWeight: 600, fontSize: '1.1em', color: '#71f7ff', textAlign: 'center', flex: 1 }}>{monthName} {currentMonth.year}</span>
-        <button onClick={() => setCurrentMonth(m => ({ year: m.month === 11 ? m.year + 1 : m.year, month: m.month === 11 ? 0 : m.month + 1 }))} style={navBtnStyle}>&gt;</button>
+        <button onClick={() => { triggerHaptic(); setCurrentMonth(m => ({ year: m.month === 11 ? m.year + 1 : m.year, month: m.month === 11 ? 0 : m.month + 1 })); }} style={navBtnStyle}>&gt;</button>
         {onClose && (
           <button
             onClick={onClose}
@@ -168,7 +175,7 @@ function Calendar({ onClose }) {
                 return (
                   <td key={j} style={{ padding: 0, textAlign: 'center' }}>
                     <button
-                      onClick={() => setSelectedDate(dateStr)}
+                      onClick={() => { triggerHaptic(); setSelectedDate(dateStr); }}
                       style={{
                         width: 32, height: 32, borderRadius: '50%', border: 'none',
                         background: isSelected ? '#71f7ff' : isToday ? '#222' : '#181818',

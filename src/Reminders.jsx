@@ -141,15 +141,83 @@ function Reminders() {
     } catch {}
   }, [autoDelete]);
 
+  // Helper to play reminder sound
+  function playReminderSound() {
+    try {
+      const audio = new Audio('/assets/orbitly-reminder.mp3');
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    } catch {}
+  }
+
+  // Helper to trigger haptic feedback
+  function triggerHaptic() {
+    if (navigator.vibrate) {
+      navigator.vibrate([30, 30, 30]); // triple short pulse
+    }
+  }
+
+  // Helper to schedule a notification for a reminder
+  function scheduleReminderNotification(reminder, idx) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if (!reminder.date || !reminder.time) return;
+    const dt = new Date(reminder.date + 'T' + reminder.time);
+    const now = new Date();
+    const timeout = dt - now;
+    if (timeout > 0) {
+      setTimeout(() => {
+        new Notification('Orbitly Reminder', {
+          body: reminder.task + (reminder.date && reminder.time ? ` (${new Date(reminder.date + 'T' + reminder.time).toLocaleString()})` : ''),
+        });
+        playReminderSound();
+        triggerHaptic();
+      }, timeout);
+    }
+  }
+
+  // Reschedule notifications for all reminders with a future date/time
+  useEffect(() => {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    reminders.forEach((rem, idx) => {
+      if (rem.date && rem.time) {
+        const dt = new Date(rem.date + 'T' + rem.time);
+        if (dt > new Date()) {
+          scheduleReminderNotification(rem, idx);
+        }
+      }
+    });
+  }, [reminders]);
+
+  // Helper to wrap a handler with haptic feedback
+  function withHaptics(fn) {
+    return (...args) => {
+      triggerHaptic();
+      fn(...args);
+    };
+  }
+
   return (
     <div style={styles.wrapper}>
       <h3>🪐 Reminders</h3>
+      <div style={{
+        background: '#2a2233',
+        color: '#ffb6c1',
+        borderRadius: 8,
+        padding: '0.7em 1em',
+        marginBottom: 12,
+        fontSize: '0.98em',
+        boxShadow: '0 0 6px #0ff2',
+        border: '1px solid #333',
+        textAlign: 'center',
+      }}>
+        <strong>Note:</strong> Reminders will only trigger notifications while Orbitly is open or running in the background. Due to browser security, scheduled notifications will not work if the app is fully closed.
+      </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <label style={{ color: '#eee', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.98em' }}>
           <input
             type="checkbox"
             checked={autoDelete}
-            onChange={e => setAutoDelete(e.target.checked)}
+            onChange={withHaptics(e => setAutoDelete(e.target.checked))}
             style={{ accentColor: '#71f7ff' }}
           />
           Auto-delete reminders after their time
@@ -169,7 +237,7 @@ function Reminders() {
               <input
                 type="checkbox"
                 checked={showDateTime}
-                onChange={e => setShowDateTime(e.target.checked)}
+                onChange={withHaptics(e => setShowDateTime(e.target.checked))}
                 style={{ accentColor: '#71f7ff' }}
               />
               Date/Time
@@ -191,7 +259,7 @@ function Reminders() {
               />
             </div>
           )}
-          <button onClick={addReminder} style={{ ...styles.button, marginTop: 8, alignSelf: 'flex-end' }}>Add</button>
+          <button onClick={withHaptics(addReminder)} style={{ ...styles.button, marginTop: 8, alignSelf: 'flex-end' }}>Add</button>
         </div>
       </div>
       <ul style={styles.list}>
@@ -200,8 +268,8 @@ function Reminders() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <span style={{ color: '#aaa', fontSize: '0.85em' }}>{item.date && item.time ? new Date(item.date + 'T' + item.time).toLocaleString() : '\u2014'}</span>
               <div>
-                <button onClick={() => startEdit(index)} style={{ background: 'none', border: 'none', color: '#ffd9e3', fontSize: '1.1em', cursor: 'pointer', padding: 0, marginRight: 8 }} title="Edit">✏️</button>
-                <button onClick={() => deleteReminder(index)} style={{ background: 'none', border: 'none', color: '#ff6b6b', fontSize: '1.1em', cursor: 'pointer', padding: 0 }} title="Delete">🗑️</button>
+                <button onClick={withHaptics(() => startEdit(index))} style={{ background: 'none', border: 'none', color: '#ffd9e3', fontSize: '1.1em', cursor: 'pointer', padding: 0, marginRight: 8 }} title="Edit">✏️</button>
+                <button onClick={withHaptics(() => deleteReminder(index))} style={{ background: 'none', border: 'none', color: '#ff6b6b', fontSize: '1.1em', cursor: 'pointer', padding: 0 }} title="Delete">🗑️</button>
               </div>
             </div>
             {editingIdx === index ? (
@@ -239,7 +307,7 @@ function Reminders() {
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
-                  <button onClick={() => saveEdit(index)} style={{
+                  <button onClick={withHaptics(() => saveEdit(index))} style={{
                     background: '#71f7ff',
                     color: '#181818',
                     border: 'none',
@@ -250,7 +318,7 @@ function Reminders() {
                     cursor: 'pointer',
                     transition: 'background 0.2s',
                   }}>Save</button>
-                  <button onClick={cancelEdit} style={{
+                  <button onClick={withHaptics(cancelEdit)} style={{
                     background: 'none',
                     border: '1px solid #333',
                     color: '#ffd9e3',
