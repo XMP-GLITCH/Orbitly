@@ -135,55 +135,6 @@ function Calendar({ onClose }) {
     }
   }
 
-  const monthName = new Date(currentMonth.year, currentMonth.month).toLocaleString('default', { month: 'long' });
-
-  // On mount, reschedule notifications for all future events with reminders
-  useEffect(() => {
-    if (!('Notification' in window) || Notification.permission !== 'granted') return;
-    Object.entries(events).forEach(([dateStr, evArr]) => {
-      evArr.forEach(ev => {
-        if (ev.reminder) scheduleEventNotifications(dateStr, ev.text);
-      });
-    });
-  }, [events]);
-
-  function playReminderSound() {
-    if (notificationActive) return;
-    setNotificationActive(true);
-    const audio = new Audio(calendarSoundFile);
-    audioRef.current = audio;
-    audio.currentTime = 0;
-    audio.play().catch(() => {});
-    audio.onloadedmetadata = () => {
-      const len = audio.duration || 9;
-      let elapsed = 0;
-      hapticIntervalRef.current = setInterval(() => {
-        if (navigator.vibrate) navigator.vibrate([50, 100]);
-        elapsed += 0.5;
-        if (elapsed >= len) {
-          clearInterval(hapticIntervalRef.current);
-          setNotificationActive(false);
-        }
-      }, 500);
-      setTimeout(() => stopNotification(), len * 1000);
-    };
-    setTimeout(() => {
-      window.alert('Calendar Event Reminder! Click OK or Force Stop to dismiss.');
-      stopNotification();
-    }, 1000);
-  }
-
-  function stopNotification() {
-    setNotificationActive(false);
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-    if (hapticIntervalRef.current) {
-      clearInterval(hapticIntervalRef.current);
-    }
-  }
-
   return (
     <div style={{ background: '#181818', borderRadius: 12, boxShadow: '0 0 8px #0ff2', color: '#eee', position: 'relative', padding: '1.5rem', margin: 0 }}>
       <h3 style={{ color: '#ffd9e3', marginBottom: 12, textAlign: 'center' }}>🗓️ Calendar</h3>
