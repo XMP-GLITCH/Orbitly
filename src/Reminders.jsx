@@ -141,42 +141,6 @@ function Reminders() {
     } catch {}
   }, [autoDelete]);
 
-  const dropdownStyle = {
-    position: 'absolute',
-    top: '110%',
-    left: 0,
-    background: '#181818',
-    border: '1px solid #333',
-    borderRadius: 8,
-    boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
-    padding: '1rem',
-    zIndex: 10,
-    display: 'flex',
-    gap: '0.5rem',
-    alignItems: 'center',
-  };
-
-  const editDropdownStyle = {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    width: '100%',
-    background: '#181818',
-    border: '1px solid #333',
-    borderRadius: 8,
-    boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
-    padding: '1rem',
-    zIndex: 10,
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '0.5rem',
-    alignItems: 'center',
-    minWidth: 0,
-    maxWidth: '100%',
-    boxSizing: 'border-box',
-  };
-
   return (
     <div style={styles.wrapper}>
       <h3>🪐 Reminders</h3>
@@ -192,7 +156,7 @@ function Reminders() {
         </label>
       </div>
       <div style={styles.inputRow}>
-        <div style={{ ...styles.inputRow, position: 'relative' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6, width: '100%' }}>
           <input
             type="text"
             value={task}
@@ -200,18 +164,19 @@ function Reminders() {
             placeholder="Enter a reminder..."
             style={styles.input}
           />
-          <button onClick={addReminder} style={styles.button}>Add</button>
-          <label style={{ color: '#eee', marginLeft: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
-            <input
-              type="checkbox"
-              checked={showDateTime}
-              onChange={e => setShowDateTime(e.target.checked)}
-              style={{ accentColor: '#71f7ff' }}
-            />
-            Date/Time
-          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+            <label style={{ color: '#eee', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.98em' }}>
+              <input
+                type="checkbox"
+                checked={showDateTime}
+                onChange={e => setShowDateTime(e.target.checked)}
+                style={{ accentColor: '#71f7ff' }}
+              />
+              Date/Time
+            </label>
+          </div>
           {showDateTime && (
-            <div style={dropdownStyle}>
+            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
               <input
                 type="date"
                 value={reminderDate}
@@ -226,6 +191,7 @@ function Reminders() {
               />
             </div>
           )}
+          <button onClick={addReminder} style={{ ...styles.button, marginTop: 8, alignSelf: 'flex-end' }}>Add</button>
         </div>
       </div>
       <ul style={styles.list}>
