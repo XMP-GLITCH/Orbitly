@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import reminderSoundFile from './assets/orbitly-reminder.mp3';
+import { useState, useEffect, useRef } from 'react';
+import standardSoundFile from './assets/mixkit-correct-answer-tone-2870.wav';
+import aggressiveSoundFile from './assets/mixkit-urgent-simple-tone-loop-2976.wav';
 
 function Schedule({ onClose }) {
   const [daily, setDaily] = useState([]); // Array of daily entries
@@ -17,6 +18,16 @@ function Schedule({ onClose }) {
   const [weeklyReminders, setWeeklyReminders] = useState({
     Monday: false, Tuesday: false, Wednesday: false, Thursday: false, Friday: false, Saturday: false, Sunday: false
   });
+  const [notificationMode, setNotificationMode] = useState(() => {
+    try {
+      return localStorage.getItem('orbitly_notification_mode') || 'standard';
+    } catch {
+      return 'standard';
+    }
+  });
+  const [notificationActive, setNotificationActive] = useState(false);
+  const audioRef = useRef(null);
+  const hapticIntervalRef = useRef(null);
 
   // Load from localStorage
   useEffect(() => {
@@ -51,13 +62,47 @@ function Schedule({ onClose }) {
     }
   }, []);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('orbitly_notification_mode', notificationMode);
+    } catch {}
+  }, [notificationMode]);
+
   // Play reminder sound
   function playReminderSound() {
-    try {
-      const audio = new Audio(reminderSoundFile);
-      audio.currentTime = 0;
-      audio.play().catch(() => {});
-    } catch {}
+    if (notificationActive) return;
+    setNotificationActive(true);
+    const audio = new Audio(notificationMode === 'aggressive' ? aggressiveSoundFile : standardSoundFile);
+    audioRef.current = audio;
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+    if (notificationMode === 'standard') {
+      let elapsed = 0;
+      hapticIntervalRef.current = setInterval(() => {
+        if (navigator.vibrate) navigator.vibrate([50, 100]);
+        elapsed += 0.5;
+        if (elapsed >= 9) {
+          clearInterval(hapticIntervalRef.current);
+          setNotificationActive(false);
+        }
+      }, 500);
+    } else {
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
+      setTimeout(() => setNotificationActive(false), 9000);
+    }
+    window.alert('Reminder! Click OK or Force Stop to dismiss.');
+    stopNotification();
+  }
+
+  function stopNotification() {
+    setNotificationActive(false);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    if (hapticIntervalRef.current) {
+      clearInterval(hapticIntervalRef.current);
+    }
   }
 
   // Schedule task notifications
@@ -227,6 +272,18 @@ function Schedule({ onClose }) {
         >
           Weekly
         </button>
+      </div>
+      <div style={{ marginBottom: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
+        <label style={{ color: '#eee', fontSize: '0.98em' }}>
+          Notification Mode:
+          <select value={notificationMode} onChange={e => setNotificationMode(e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="standard">Standard</option>
+            <option value="aggressive">Aggressive</option>
+          </select>
+        </label>
+        {notificationActive && (
+          <button onClick={stopNotification} style={{ background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 6, padding: '0.4rem 1rem', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer' }}>Force Stop</button>
+        )}
       </div>
       {view === 'daily' ? (
         <div>

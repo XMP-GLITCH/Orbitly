@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import standardSoundFile from './assets/mixkit-correct-answer-tone-2870.wav';
+import aggressiveSoundFile from './assets/mixkit-urgent-simple-tone-loop-2976.wav';
 
 function Reminders() {
   const [showDateTime, setShowDateTime] = useState(false);
@@ -19,6 +21,16 @@ function Reminders() {
       return false;
     }
   });
+  const [notificationMode, setNotificationMode] = useState(() => {
+    try {
+      return localStorage.getItem('orbitly_notification_mode') || 'standard';
+    } catch {
+      return 'standard';
+    }
+  });
+  const [notificationActive, setNotificationActive] = useState(false);
+  const audioRef = useRef(null);
+  const hapticIntervalRef = useRef(null);
 
   useEffect(() => {
     try {
@@ -47,6 +59,13 @@ function Reminders() {
       console.error('[Reminders] Failed to persist reminders:', e);
     }
   }, [reminders]);
+
+  // Save notification mode
+  useEffect(() => {
+    try {
+      localStorage.setItem('orbitly_notification_mode', notificationMode);
+    } catch {}
+  }, [notificationMode]);
 
   const addReminder = () => {
     if (task.trim() === '') return;
@@ -141,13 +160,65 @@ function Reminders() {
     } catch {}
   }, [autoDelete]);
 
-  // Helper to play reminder sound
+  // Helper to play reminder sound with haptic and popup
   function playReminderSound() {
-    try {
-      const audio = new Audio('/assets/orbitly-reminder.mp3');
-      audio.currentTime = 0;
-      audio.play().catch(() => {});
-    } catch {}
+    if (notificationActive) return;
+    setNotificationActive(true);
+    let audio, duration;
+    if (notificationMode === 'aggressive') {
+      audio = new Audio(aggressiveSoundFile);
+      duration = 9000;
+    } else {
+      audio = new Audio(standardSoundFile);
+      duration = null; // Use audio duration
+    }
+    audioRef.current = audio;
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+    // Haptic feedback
+    if (notificationMode === 'aggressive') {
+      let elapsed = 0;
+      hapticIntervalRef.current = setInterval(() => {
+        if (navigator.vibrate) navigator.vibrate([50, 100]);
+        elapsed += 0.5;
+        if (elapsed >= 9) {
+          clearInterval(hapticIntervalRef.current);
+          setNotificationActive(false);
+        }
+      }, 500);
+      setTimeout(() => stopNotification(), 9000);
+    } else {
+      // Standard: haptic for audio duration
+      audio.onloadedmetadata = () => {
+        const len = audio.duration || 9;
+        let elapsed = 0;
+        hapticIntervalRef.current = setInterval(() => {
+          if (navigator.vibrate) navigator.vibrate([50, 100]);
+          elapsed += 0.5;
+          if (elapsed >= len) {
+            clearInterval(hapticIntervalRef.current);
+            setNotificationActive(false);
+          }
+        }, 500);
+        setTimeout(() => stopNotification(), len * 1000);
+      };
+    }
+    // Show popup
+    setTimeout(() => {
+      window.alert('Reminder! Click OK or Force Stop to dismiss.');
+      stopNotification();
+    }, 1000);
+  }
+
+  function stopNotification() {
+    setNotificationActive(false);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    if (hapticIntervalRef.current) {
+      clearInterval(hapticIntervalRef.current);
+    }
   }
 
   // Helper to trigger haptic feedback
@@ -222,6 +293,18 @@ function Reminders() {
           />
           Auto-delete reminders after their time
         </label>
+      </div>
+      <div style={{ marginBottom: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
+        <label style={{ color: '#eee', fontSize: '0.98em' }}>
+          Notification Mode:
+          <select value={notificationMode} onChange={e => setNotificationMode(e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="standard">Standard</option>
+            <option value="aggressive">Aggressive</option>
+          </select>
+        </label>
+        {notificationActive && (
+          <button onClick={stopNotification} style={{ background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 6, padding: '0.4rem 1rem', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer' }}>Force Stop</button>
+        )}
       </div>
       <div style={styles.inputRow}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6, width: '100%' }}>

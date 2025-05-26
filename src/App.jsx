@@ -40,6 +40,13 @@ function App() {
     cursor: 'pointer',
   };
 
+  // Helper to trigger haptic feedback
+  function triggerHaptic() {
+    if (navigator.vibrate) {
+      navigator.vibrate([30]); // short pulse
+    }
+  }
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -104,17 +111,17 @@ function App() {
         </div>
         <Reminders />
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', margin: '1.5rem 0' }}>
-          <button onClick={() => setOpenSection(openSection === 'schedule' ? null : 'schedule')} style={{ ...buttonStyle, background: openSection === 'schedule' ? '#222' : '#181818', color: openSection === 'schedule' ? '#71f7ff' : '#eee' }}>
+          <button onClick={() => { triggerHaptic(); setOpenSection(openSection === 'schedule' ? null : 'schedule'); }} style={{ ...buttonStyle, background: openSection === 'schedule' ? '#222' : '#181818', color: openSection === 'schedule' ? '#71f7ff' : '#eee' }}>
             {openSection === 'schedule' ? 'Hide Schedules' : 'Show Schedules'}
           </button>
-          <button onClick={() => setOpenSection(openSection === 'calendar' ? null : 'calendar')} style={{ ...buttonStyle, background: openSection === 'calendar' ? '#222' : '#181818', color: openSection === 'calendar' ? '#71f7ff' : '#eee' }}>
+          <button onClick={() => { triggerHaptic(); setOpenSection(openSection === 'calendar' ? null : 'calendar'); }} style={{ ...buttonStyle, background: openSection === 'calendar' ? '#222' : '#181818', color: openSection === 'calendar' ? '#71f7ff' : '#eee' }}>
             {openSection === 'calendar' ? 'Hide Calendar' : 'Show Calendar'}
           </button>
-          <button onClick={() => setOpenSection(openSection === 'voice' ? null : 'voice')} style={{ ...buttonStyle, background: openSection === 'voice' ? '#222' : '#181818', color: openSection === 'voice' ? '#ffd9e3' : '#eee' }}>
+          <button onClick={() => { triggerHaptic(); setOpenSection(openSection === 'voice' ? null : 'voice'); }} style={{ ...buttonStyle, background: openSection === 'voice' ? '#222' : '#181818', color: openSection === 'voice' ? '#ffd9e3' : '#eee' }}>
             {openSection === 'voice' ? 'Close Voice Memos' : '🎤 Voice Memos'}
           </button>
-          <button onClick={() => setOpenSection(openSection === 'journal' ? null : 'journal')} style={{ ...buttonStyle, background: openSection === 'journal' ? '#222' : '#181818', color: openSection === 'journal' ? '#ffd9e3' : '#eee' }}>
-            {openSection === 'journal' ? 'Close Journal' : '🪐 Journal'}
+          <button onClick={() => { triggerHaptic(); setOpenSection(openSection === 'journal' ? null : 'journal'); }} style={{ ...buttonStyle, background: openSection === 'journal' ? '#222' : '#181818', color: openSection === 'journal' ? '#ffd9e3' : '#eee' }}>
+            {openSection === 'journal' ? 'Close Journal' : '📓 Journal'}
           </button>
         </div>
         {openSection === 'schedule' && (

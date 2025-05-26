@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import reminderSoundFile from './assets/orbitly-reminder.mp3';
+import { useState, useEffect, useRef } from 'react';
+import calendarSoundFile from './assets/mixkit-correct-answer-tone-2870.wav';
 
 function useLocalStorageState(key, defaultValue) {
   const [state, setState] = useState(() => {
@@ -46,6 +46,9 @@ function Calendar({ onClose }) {
   const [selectedDate, setSelectedDate] = useState(today);
   const [eventInput, setEventInput] = useState('');
   const [reminderChecked, setReminderChecked] = useState(false);
+  const [notificationActive, setNotificationActive] = useState(false);
+  const audioRef = useRef(null);
+  const hapticIntervalRef = useRef(null);
 
   const days = getMonthDays(currentMonth.year, currentMonth.month);
   const firstDayOfWeek = new Date(currentMonth.year, currentMonth.month, 1).getDay();
@@ -96,34 +99,88 @@ function Calendar({ onClose }) {
   }, [events]);
 
   function playReminderSound() {
-    try {
-      const audio = new Audio(reminderSoundFile);
-      audio.currentTime = 0;
-      audio.play().catch(() => {});
-    } catch {}
+    if (notificationActive) return;
+    setNotificationActive(true);
+    const audio = new Audio(calendarSoundFile);
+    audioRef.current = audio;
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+    audio.onloadedmetadata = () => {
+      const len = audio.duration || 9;
+      let elapsed = 0;
+      hapticIntervalRef.current = setInterval(() => {
+        if (navigator.vibrate) navigator.vibrate([50, 100]);
+        elapsed += 0.5;
+        if (elapsed >= len) {
+          clearInterval(hapticIntervalRef.current);
+          setNotificationActive(false);
+        }
+      }, 500);
+      setTimeout(() => stopNotification(), len * 1000);
+    };
+    setTimeout(() => {
+      window.alert('Calendar Event Reminder! Click OK or Force Stop to dismiss.');
+      stopNotification();
+    }, 1000);
   }
 
-  function scheduleEventNotifications(dateStr, eventText) {
+  function stopNotification() {
+    setNotificationActive(false);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    if (hapticIntervalRef.current) {
+      clearInterval(hapticIntervalRef.current);
+    }
+  }
+
+  const monthName = new Date(currentMonth.year, currentMonth.month).toLocaleString('default', { month: 'long' });
+
+  // On mount, reschedule notifications for all future events with reminders
+  useEffect(() => {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
-    const eventDate = new Date(dateStr + 'T09:00:00'); // 9am default
-    const now = new Date();
-    const notifyTimes = [7 * 24 * 60 * 60 * 1000, 3 * 24 * 60 * 60 * 1000, 1 * 24 * 60 * 60 * 1000];
-    notifyTimes.forEach(msBefore => {
-      const notifyAt = new Date(eventDate.getTime() - msBefore);
-      const timeout = notifyAt - now;
-      if (timeout > 0) {
-        setTimeout(() => {
-          new Notification('Orbitly Event Reminder', { body: `${eventText} (${dateStr})` });
-          playReminderSound();
-        }, timeout);
-      }
+    Object.entries(events).forEach(([dateStr, evArr]) => {
+      evArr.forEach(ev => {
+        if (ev.reminder) scheduleEventNotifications(dateStr, ev.text);
+      });
     });
+  }, [events]);
+
+  function playReminderSound() {
+    if (notificationActive) return;
+    setNotificationActive(true);
+    const audio = new Audio(calendarSoundFile);
+    audioRef.current = audio;
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+    audio.onloadedmetadata = () => {
+      const len = audio.duration || 9;
+      let elapsed = 0;
+      hapticIntervalRef.current = setInterval(() => {
+        if (navigator.vibrate) navigator.vibrate([50, 100]);
+        elapsed += 0.5;
+        if (elapsed >= len) {
+          clearInterval(hapticIntervalRef.current);
+          setNotificationActive(false);
+        }
+      }, 500);
+      setTimeout(() => stopNotification(), len * 1000);
+    };
+    setTimeout(() => {
+      window.alert('Calendar Event Reminder! Click OK or Force Stop to dismiss.');
+      stopNotification();
+    }, 1000);
   }
 
-  // Helper to trigger haptic feedback
-  function triggerHaptic() {
-    if (navigator.vibrate) {
-      navigator.vibrate([30]); // short pulse
+  function stopNotification() {
+    setNotificationActive(false);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    if (hapticIntervalRef.current) {
+      clearInterval(hapticIntervalRef.current);
     }
   }
 

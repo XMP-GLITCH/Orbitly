@@ -9,21 +9,21 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "vite.svg",
+      "src": "Picsart_25-05-26-23-07-56-664.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "vite.svg",
+      "src": "Picsart_25-05-26-23-07-56-664.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "vite.svg",
+      "src": "Picsart_25-05-26-23-07-56-664.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "maskable"
     }
   ],
@@ -33,14 +33,14 @@
       "short_name": "Reminder",
       "description": "Quickly add a new reminder",
       "url": "/#reminders",
-      "icons": [{ "src": "vite.svg", "sizes": "192x192" }]
+      "icons": [{ "src": "Picsart_25-05-26-23-07-56-664.png", "sizes": "192x192" }]
     },
     {
       "name": "New Journal Entry",
       "short_name": "Journal",
       "description": "Write a new journal entry",
       "url": "/#journal",
-      "icons": [{ "src": "vite.svg", "sizes": "192x192" }]
+      "icons": [{ "src": "Picsart_25-05-26-23-07-56-664.png", "sizes": "192x192" }]
     }
   ],
   "related_applications": [
