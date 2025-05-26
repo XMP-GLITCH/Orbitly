@@ -10,6 +10,28 @@ import './App.css';
 
 function App() {
   const [openSection, setOpenSection] = useState(null); // 'schedule' | 'calendar' | 'voice' | 'journal' | null
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBanner(true);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setShowInstallBanner(false);
+      }
+    }
+  };
 
   const buttonStyle = {
     padding: '0.5rem 1rem',
@@ -38,6 +60,44 @@ function App() {
         fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
         position: 'relative',
       }}>
+        {showInstallBanner && (
+          <div style={{
+            background: '#181818',
+            border: '1px solid #333',
+            borderRadius: 10,
+            color: '#71f7ff',
+            padding: '1em',
+            marginBottom: 16,
+            textAlign: 'center',
+            boxShadow: '0 0 8px #0ff2',
+            zIndex: 1000,
+          }}>
+            <strong>Install Orbitly for a native app experience!</strong><br />
+            <button onClick={handleInstallClick} style={{
+              marginTop: 10,
+              background: '#71f7ff',
+              color: '#181818',
+              border: 'none',
+              borderRadius: 8,
+              padding: '0.5em 1.2em',
+              fontWeight: 600,
+              fontSize: '1em',
+              cursor: 'pointer',
+              boxShadow: '0 0 4px #0ff2',
+            }}>Install</button>
+            <button onClick={() => setShowInstallBanner(false)} style={{
+              marginLeft: 10,
+              background: 'none',
+              color: '#ffd9e3',
+              border: '1px solid #333',
+              borderRadius: 8,
+              padding: '0.5em 1.2em',
+              fontWeight: 600,
+              fontSize: '1em',
+              cursor: 'pointer',
+            }}>Dismiss</button>
+          </div>
+        )}
         <div style={{textAlign: 'center'}}>
           <Header />
           <Welcome />

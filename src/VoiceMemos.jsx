@@ -26,16 +26,21 @@ function VoiceMemos() {
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) audioChunksRef.current.push(e.data);
       };
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const url = URL.createObjectURL(blob);
-        setAudioURL(url);
-        const newMemo = { url, date: new Date().toISOString(), name: 'Voice Memo' };
-        setMemos(prev => {
-          const updated = [newMemo, ...prev];
-          localStorage.setItem('orbitly_voice_memos', JSON.stringify(updated));
-          return updated;
-        });
+        // Convert blob to base64 data URL for persistence
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64data = reader.result;
+          setAudioURL(base64data);
+          const newMemo = { url: base64data, date: new Date().toISOString(), name: 'Voice Memo' };
+          setMemos(prev => {
+            const updated = [newMemo, ...prev];
+            localStorage.setItem('orbitly_voice_memos', JSON.stringify(updated));
+            return updated;
+          });
+        };
+        reader.readAsDataURL(blob);
       };
       mediaRecorder.start();
       setRecording(true);
@@ -127,7 +132,7 @@ function VoiceMemos() {
                   }}
                 />
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                  <button onClick={saveEdit} style={{
+                  <button onClick={() => saveEdit(idx)} style={{
                     background: '#71f7ff',
                     color: '#181818',
                     border: 'none',
