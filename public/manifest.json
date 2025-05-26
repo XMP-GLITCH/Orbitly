@@ -1,0 +1,22 @@
+{
+  "name": "Orbitly",
+  "short_name": "Orbitly",
+  "description": "Space-themed productivity PWA: reminders, calendar, journal, memos, and more.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#181818",
+  "theme_color": "#181818",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "vite.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "vite.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

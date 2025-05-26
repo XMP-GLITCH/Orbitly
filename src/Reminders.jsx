@@ -40,6 +40,14 @@ function Reminders() {
     }
   }, []);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('orbitly_reminders', JSON.stringify(reminders));
+    } catch (e) {
+      console.error('[Reminders] Failed to persist reminders:', e);
+    }
+  }, [reminders]);
+
   const addReminder = () => {
     if (task.trim() === '') return;
     const newReminder = { task };
@@ -47,16 +55,7 @@ function Reminders() {
       newReminder.date = reminderDate;
       newReminder.time = reminderTime;
     }
-    setReminders(prev => {
-      const updated = [newReminder, ...prev]; // Add new reminder to the top (stack format)
-      try {
-        localStorage.setItem('orbitly_reminders', JSON.stringify(updated));
-        console.log('[Reminders] Saved to localStorage:', updated);
-      } catch (e) {
-        console.error('[Reminders] Failed to save reminders:', e);
-      }
-      return updated;
-    });
+    setReminders(prev => [newReminder, ...prev]); // Add new reminder to the top (stack format)
     setTask('');
     setReminderDate('');
     setReminderTime('');
@@ -72,27 +71,18 @@ function Reminders() {
   };
 
   const saveEdit = (idx) => {
-    setReminders(prev => {
-      const updated = prev.map((r, i) => {
-        if (i !== idx) return r;
-        const updatedR = { ...r, task: editingTask };
-        if (editingShowDateTime && editingDate && editingTime) {
-          updatedR.date = editingDate;
-          updatedR.time = editingTime;
-        } else {
-          delete updatedR.date;
-          delete updatedR.time;
-        }
-        return updatedR;
-      });
-      try {
-        localStorage.setItem('orbitly_reminders', JSON.stringify(updated));
-        console.log('[Reminders] Saved to localStorage:', updated);
-      } catch (e) {
-        console.error('[Reminders] Failed to save reminders:', e);
+    setReminders(prev => prev.map((r, i) => {
+      if (i !== idx) return r;
+      const updatedR = { ...r, task: editingTask };
+      if (editingShowDateTime && editingDate && editingTime) {
+        updatedR.date = editingDate;
+        updatedR.time = editingTime;
+      } else {
+        delete updatedR.date;
+        delete updatedR.time;
       }
-      return updated;
-    });
+      return updatedR;
+    }));
     setEditingIdx(null);
     setEditingTask('');
     setEditingDate('');
@@ -109,16 +99,7 @@ function Reminders() {
   };
 
   const deleteReminder = (idx) => {
-    setReminders(prev => {
-      const updated = prev.filter((_, i) => i !== idx);
-      try {
-        localStorage.setItem('orbitly_reminders', JSON.stringify(updated));
-        console.log('[Reminders] Saved to localStorage:', updated);
-      } catch (e) {
-        console.error('[Reminders] Failed to save reminders:', e);
-      }
-      return updated;
-    });
+    setReminders(prev => prev.filter((_, i) => i !== idx));
     if (editingIdx === idx) {
       setEditingIdx(null);
       setEditingTask('');
