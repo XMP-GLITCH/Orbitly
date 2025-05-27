@@ -58,12 +58,7 @@ function App() {
 
   // Render the current section as a page
   let sectionContent = null;
-  if (openSection === 'reminders') {
-    sectionContent = <>
-      <button onClick={() => setOpenSection(null)} style={{ position: 'absolute', left: 16, top: 16, background: 'none', border: 'none', color: '#ffd9e3', fontSize: '1.2em', cursor: 'pointer' }} aria-label="Back">← Back</button>
-      <Reminders />
-    </>;
-  } else if (openSection === 'schedule') {
+  if (openSection === 'schedule') {
     sectionContent = <>
       <button onClick={() => setOpenSection(null)} style={{ position: 'absolute', left: 16, top: 16, background: 'none', border: 'none', color: '#ffd9e3', fontSize: '1.2em', cursor: 'pointer' }} aria-label="Back">← Back</button>
       <Schedule onClose={() => setOpenSection(null)} />
@@ -151,6 +146,9 @@ function App() {
             <div style={{textAlign: 'center'}}>
               <Header />
               <Welcome />
+              <div style={{ margin: '2rem 0' }}>
+                <Reminders />
+              </div>
             </div>
           </>
         )}
@@ -175,7 +173,6 @@ function App() {
           left: 0,
           zIndex: 10,
         }}>
-          <button onClick={() => { triggerHaptic(); setOpenSection('reminders'); }} style={{ ...buttonStyle, background: openSection === 'reminders' ? '#222' : '#181818', color: openSection === 'reminders' ? '#71f7ff' : '#eee', flex: 1 }}>🔔 Reminders</button>
           <button onClick={() => { triggerHaptic(); setOpenSection('schedule'); }} style={{ ...buttonStyle, background: openSection === 'schedule' ? '#222' : '#181818', color: openSection === 'schedule' ? '#71f7ff' : '#eee', flex: 1 }}>📅 Schedule</button>
           <button onClick={() => { triggerHaptic(); setOpenSection('calendar'); }} style={{ ...buttonStyle, background: openSection === 'calendar' ? '#222' : '#181818', color: openSection === 'calendar' ? '#71f7ff' : '#eee', flex: 1 }}>🗓️ Calendar</button>
           <button onClick={() => { triggerHaptic(); setOpenSection('voice'); }} style={{ ...buttonStyle, background: openSection === 'voice' ? '#222' : '#181818', color: openSection === 'voice' ? '#ffd9e3' : '#eee', flex: 1 }}>🎤 Voice</button>
