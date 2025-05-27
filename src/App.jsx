@@ -9,8 +9,8 @@ import Journal from './Journal';
 import './App.css';
 
 function App() {
-  // Set 'reminders' as the default section
-  const [openSection, setOpenSection] = useState('reminders'); // 'reminders' | 'schedule' | 'calendar' | 'voice' | 'journal' | null
+  // Set null as the default section so Welcome/Reminders show immediately
+  const [openSection, setOpenSection] = useState(null); // null = show Welcome/Reminders
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
 
@@ -59,26 +59,134 @@ function App() {
   // Render the current section as a page
   let sectionContent = null;
   if (openSection === 'schedule') {
-    sectionContent = <>
-      <button onClick={() => setOpenSection(null)} style={{ position: 'absolute', left: 16, top: 16, background: 'none', border: 'none', color: '#ffd9e3', fontSize: '1.2em', cursor: 'pointer' }} aria-label="Back">← Back</button>
-      <Schedule onClose={() => setOpenSection(null)} />
-    </>;
+    sectionContent = (
+      <div style={{ position: 'relative' }}>
+        <Schedule />
+        <button
+          onClick={() => setOpenSection(null)}
+          style={{ position: 'absolute', right: 16, top: 16, background: '#222', color: '#eee', border: 'none', borderRadius: 6, padding: '0.3rem 0.7rem', fontWeight: 600, cursor: 'pointer', fontSize: '1.1em', zIndex: 10 }}
+          aria-label="Close schedule"
+        >
+          ✕
+        </button>
+      </div>
+    );
   } else if (openSection === 'calendar') {
-    sectionContent = <>
-      <button onClick={() => setOpenSection(null)} style={{ position: 'absolute', left: 16, top: 16, background: 'none', border: 'none', color: '#ffd9e3', fontSize: '1.2em', cursor: 'pointer' }} aria-label="Back">← Back</button>
-      <Calendar />
-    </>;
+    sectionContent = (
+      <div style={{ position: 'relative' }}>
+        <Calendar />
+        <button
+          onClick={() => setOpenSection(null)}
+          style={{ position: 'absolute', right: 16, top: 16, background: '#222', color: '#eee', border: 'none', borderRadius: 6, padding: '0.3rem 0.7rem', fontWeight: 600, cursor: 'pointer', fontSize: '1.1em', zIndex: 10 }}
+          aria-label="Close calendar"
+        >
+          ✕
+        </button>
+      </div>
+    );
   } else if (openSection === 'voice') {
-    sectionContent = <>
-      <button onClick={() => setOpenSection(null)} style={{ position: 'absolute', left: 16, top: 16, background: 'none', border: 'none', color: '#ffd9e3', fontSize: '1.2em', cursor: 'pointer' }} aria-label="Back">← Back</button>
-      <VoiceMemos />
-    </>;
+    sectionContent = (
+      <div style={{ position: 'relative' }}>
+        <VoiceMemos />
+        <button
+          onClick={() => setOpenSection(null)}
+          style={{ position: 'absolute', right: 16, top: 16, background: '#222', color: '#eee', border: 'none', borderRadius: 6, padding: '0.3rem 0.7rem', fontWeight: 600, cursor: 'pointer', fontSize: '1.1em', zIndex: 10 }}
+          aria-label="Close voice memos"
+        >
+          ✕
+        </button>
+      </div>
+    );
   } else if (openSection === 'journal') {
-    sectionContent = <>
-      <button onClick={() => setOpenSection(null)} style={{ position: 'absolute', left: 16, top: 16, background: 'none', border: 'none', color: '#ffd9e3', fontSize: '1.2em', cursor: 'pointer' }} aria-label="Back">← Back</button>
-      <Journal />
-    </>;
+    sectionContent = (
+      <div style={{ position: 'relative' }}>
+        <Journal />
+        <button
+          onClick={() => setOpenSection(null)}
+          style={{ position: 'absolute', right: 16, top: 16, background: '#222', color: '#eee', border: 'none', borderRadius: 6, padding: '0.3rem 0.7rem', fontWeight: 600, cursor: 'pointer', fontSize: '1.1em', zIndex: 10 }}
+          aria-label="Close journal"
+        >
+          ✕
+        </button>
+      </div>
+    );
   }
+
+  // Push Notification Logic
+  useEffect(() => {
+    // Only run in browser
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+    let swReg = null;
+    let vapidKey = null;
+
+    // Get VAPID public key from backend
+    fetch('http://localhost:4000/vapidPublicKey')
+      .then(res => res.json())
+      .then(data => {
+        vapidKey = data.key;
+        return navigator.serviceWorker.register('/service-worker.js');
+      })
+      .then(reg => {
+        swReg = reg;
+        return swReg.pushManager.getSubscription();
+      })
+      .then(async (sub) => {
+        if (!sub && vapidKey) {
+          // Subscribe user
+          const convertedVapidKey = urlBase64ToUint8Array(vapidKey);
+          const newSub = await swReg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: convertedVapidKey
+          });
+          // Send subscription to backend
+          await fetch('http://localhost:4000/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newSub)
+          });
+        } else if (sub) {
+          // Already subscribed, ensure backend knows
+          await fetch('http://localhost:4000/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sub)
+          });
+        }
+      })
+      .catch(err => {
+        // Ignore if user blocks or unsupported
+        // Optionally show a warning in UI
+        // console.error('Push setup error', err);
+      });
+
+    // Helper to convert VAPID key
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding)
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+    }
+  }, []);
+
+  // Always prompt for install if not installed
+  useEffect(() => {
+    let intervalId;
+    if (!window.matchMedia('(display-mode: standalone)').matches && !window.navigator.standalone) {
+      intervalId = setInterval(() => {
+        if (!showInstallBanner && !window.matchMedia('(display-mode: standalone)').matches && !window.navigator.standalone) {
+          setShowInstallBanner(true);
+        }
+      }, 15000); // re-prompt every 15 seconds if dismissed
+    }
+    return () => intervalId && clearInterval(intervalId);
+  }, [showInstallBanner]);
 
   return (
     <div style={{
@@ -160,23 +268,36 @@ function App() {
           <div style={{ flex: 1 }} />
         )}
         <footer style={{
-          width: '100%',
-          background: '#181818',
+          position: 'fixed',
+          left: 0,
+          bottom: 0,
+          width: '100vw',
+          background: 'rgba(24,24,24,0.82)', // translucent dark background
           borderTop: '1px solid #222',
           borderRadius: '0 0 12px 12px',
           padding: '0.7rem 0.5rem 0.5rem 0.5rem',
           display: 'flex',
-          justifyContent: 'space-around',
-          gap: '0.5rem',
-          position: 'sticky',
-          bottom: 0,
-          left: 0,
-          zIndex: 10,
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 100,
+          minHeight: 60,
+          boxSizing: 'border-box',
+          pointerEvents: 'auto',
+          backdropFilter: 'blur(8px)', // subtle blur for glass effect
         }}>
-          <button onClick={() => { triggerHaptic(); setOpenSection('schedule'); }} style={{ ...buttonStyle, background: openSection === 'schedule' ? '#222' : '#181818', color: openSection === 'schedule' ? '#71f7ff' : '#eee', flex: 1 }}>📅 Schedule</button>
-          <button onClick={() => { triggerHaptic(); setOpenSection('calendar'); }} style={{ ...buttonStyle, background: openSection === 'calendar' ? '#222' : '#181818', color: openSection === 'calendar' ? '#71f7ff' : '#eee', flex: 1 }}>🗓️ Calendar</button>
-          <button onClick={() => { triggerHaptic(); setOpenSection('voice'); }} style={{ ...buttonStyle, background: openSection === 'voice' ? '#222' : '#181818', color: openSection === 'voice' ? '#ffd9e3' : '#eee', flex: 1 }}>🎤 Voice</button>
-          <button onClick={() => { triggerHaptic(); setOpenSection('journal'); }} style={{ ...buttonStyle, background: openSection === 'journal' ? '#222' : '#181818', color: openSection === 'journal' ? '#ffd9e3' : '#eee', flex: 1 }}>📓 Journal</button>
+          <div style={{
+            display: 'flex',
+            width: '100%',
+            maxWidth: 450,
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 0,
+          }}>
+            <button style={{ ...buttonStyle, flex: 1, minWidth: 0, fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)', padding: '0.5em 0.2em' }} onClick={() => { triggerHaptic(); setOpenSection('schedule'); }}>📅 Schedule</button>
+            <button style={{ ...buttonStyle, flex: 1, minWidth: 0, fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)', padding: '0.5em 0.2em' }} onClick={() => { triggerHaptic(); setOpenSection('calendar'); }}>🗓️ Calendar</button>
+            <button style={{ ...buttonStyle, flex: 1, minWidth: 0, fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)', padding: '0.5em 0.2em' }} onClick={() => { triggerHaptic(); setOpenSection('voice'); }}>🎤 Voice</button>
+            <button style={{ ...buttonStyle, flex: 1, minWidth: 0, fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)', padding: '0.5em 0.2em' }} onClick={() => { triggerHaptic(); setOpenSection('journal'); }}>📓 Journal</button>
+          </div>
         </footer>
       </div>
     </div>

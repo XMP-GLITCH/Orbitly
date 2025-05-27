@@ -137,13 +137,45 @@ function Calendar({ onClose }) {
     }
   }
 
+  // Helper to trigger haptic feedback
+  function triggerHaptic() {
+    if (navigator.vibrate) {
+      navigator.vibrate([30]); // short pulse
+    }
+  }
+
+  // Helper to change month and year
+  function changeMonth(offset) {
+    setCurrentMonth(m => {
+      let year = m.year;
+      let month = m.month + offset;
+      if (month < 0) {
+        year -= 1;
+        month = 11;
+      } else if (month > 11) {
+        year += 1;
+        month = 0;
+      }
+      return { year, month };
+    });
+  }
+
+  // Fix: Reset selectedDate when month changes if out of range
+  useEffect(() => {
+    const daysInMonth = getMonthDays(currentMonth.year, currentMonth.month);
+    if (!daysInMonth.find(d => d.toISOString().slice(0, 10) === selectedDate)) {
+      // If selectedDate is not in the new month, set to first day of month
+      setSelectedDate(daysInMonth[0].toISOString().slice(0, 10));
+    }
+  }, [currentMonth]);
+
   return (
     <div style={{ background: '#181818', borderRadius: 12, boxShadow: '0 0 8px #0ff2', color: '#eee', position: 'relative', padding: '2.5rem 1.5rem 1.5rem 1.5rem', margin: 0 }}>
       <h3 style={{ color: '#ffd9e3', marginBottom: 12, textAlign: 'center' }}>🗓️ Calendar</h3>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, position: 'relative' }}>
-        <button onClick={() => { triggerHaptic(); setCurrentMonth(m => ({ year: m.month === 0 ? m.year - 1 : m.year, month: m.month === 0 ? 11 : m.month - 1 })); }} style={navBtnStyle}>&lt;</button>
+        <button type="button" onClick={() => { triggerHaptic(); changeMonth(-1); }} style={navBtnStyle}>&lt;</button>
         <span style={{ fontWeight: 600, fontSize: '1.1em', color: '#71f7ff', textAlign: 'center', flex: 1 }}>{monthName} {currentMonth.year}</span>
-        <button onClick={() => { triggerHaptic(); setCurrentMonth(m => ({ year: m.month === 11 ? m.year + 1 : m.year, month: m.month === 11 ? 0 : m.month + 1 })); }} style={navBtnStyle}>&gt;</button>
+        <button type="button" onClick={() => { triggerHaptic(); changeMonth(1); }} style={navBtnStyle}>&gt;</button>
         {onClose && (
           <button
             onClick={onClose}
@@ -185,6 +217,7 @@ function Calendar({ onClose }) {
                 return (
                   <td key={j} style={{ padding: 0, textAlign: 'center' }}>
                     <button
+                      type="button"
                       onClick={() => { triggerHaptic(); setSelectedDate(dateStr); }}
                       style={{
                         width: 32, height: 32, borderRadius: '50%', border: 'none',
@@ -196,6 +229,8 @@ function Calendar({ onClose }) {
                         margin: 2, cursor: 'pointer',
                         transition: 'background 0.2s, color 0.2s',
                       }}
+                      tabIndex={0}
+                      aria-label={`Select ${dateStr}`}
                     >
                       {date.getDate()}
                     </button>

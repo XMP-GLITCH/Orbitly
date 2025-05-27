@@ -318,33 +318,49 @@ function Schedule({ onClose }) {
         </button>
       </div>
       <div style={{ marginBottom: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
-        <label style={{ color: '#eee', fontSize: '0.98em' }}>
-          Notification Mode:
-          <select value={notificationMode} onChange={e => setNotificationMode(e.target.value)} style={{ marginLeft: 8 }}>
+        <label style={{ color: '#eee', fontSize: '0.98em', marginRight: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontWeight: 500 }}>Notification Mode:</span>
+          <select 
+            value={notificationMode} 
+            onChange={e => {
+              setNotificationMode(e.target.value);
+              // Play sound immediately on change
+              let audio;
+              if (e.target.value === 'aggressive') {
+                audio = new Audio(aggressiveSoundFile);
+                audio.currentTime = 0;
+                audio.play().catch(() => {});
+                setTimeout(() => {
+                  audio.pause();
+                  audio.currentTime = 0;
+                }, 1300); // Play aggressive sound for 1.3 seconds only
+              } else {
+                audio = new Audio(standardSoundFile);
+                audio.currentTime = 0;
+                audio.play().catch(() => {});
+              }
+            }} 
+            style={{
+              background: '#181818',
+              color: '#71f7ff',
+              border: '1px solid #333',
+              borderRadius: 6,
+              padding: '0.3em 1.2em 0.3em 0.7em',
+              fontSize: '1em',
+              fontWeight: 500,
+              outline: 'none',
+              boxShadow: '0 0 4px #0ff2',
+              appearance: 'none',
+              minWidth: 110,
+              transition: 'border 0.2s, box-shadow 0.2s',
+            }}
+          >
             <option value="standard">Standard</option>
             <option value="aggressive">Aggressive</option>
           </select>
         </label>
-        <button
-          type="button"
-          onClick={() => previewSound('standard')}
-          style={{ background: 'none', border: 'none', color: '#71f7ff', cursor: 'pointer', fontSize: '1.1em' }}
-          title="Preview Standard Sound"
-          aria-label="Preview Standard Notification Sound"
-        >
-          ▶️ Standard
-        </button>
-        <button
-          type="button"
-          onClick={() => previewSound('aggressive')}
-          style={{ background: 'none', border: 'none', color: '#ff6b6b', cursor: 'pointer', fontSize: '1.1em' }}
-          title="Preview Aggressive Sound"
-          aria-label="Preview Aggressive Notification Sound"
-        >
-          ▶️ Aggressive
-        </button>
         {notificationActive && (
-          <button onClick={stopNotification} style={{ background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 6, padding: '0.4rem 1rem', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer' }}>Force Stop</button>
+          <button onClick={stopNotification} style={{ background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 6, padding: '0.4rem 1rem', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', marginLeft: 8 }}>Force Stop</button>
         )}
       </div>
       {view === 'daily' ? (

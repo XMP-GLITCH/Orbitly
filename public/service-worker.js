@@ -48,3 +48,41 @@ self.addEventListener('fetch', event => {
     })
   );
 });
+
+// Handle push events for notifications
+self.addEventListener('push', function(event) {
+  let data = {};
+  if (event.data) {
+    data = event.data.json();
+  }
+  const title = data.title || 'Orbitly Reminder';
+  const options = {
+    body: data.body || '',
+    data: data.data || {},
+    icon: '/Picsart_25-05-26_23-07-56-664 (1).png',
+    badge: '/Picsart_25-05-26_23-07-56-664 (1).png',
+    vibrate: [200, 100, 200],
+    requireInteraction: true
+  };
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
+// Optionally handle notification click
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  // Focus or open the app
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+      for (const client of clientList) {
+        if (client.url && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow('/');
+      }
+    })
+  );
+});
