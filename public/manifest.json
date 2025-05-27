@@ -9,22 +9,16 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "Picsart_25-05-26_23-07-56-664.png",
+      "src": "Picsart_25-05-26_23-07-56-664 (1).png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
-      "src": "Picsart_25-05-26_23-07-56-664.png",
+      "src": "Picsart_25-05-26_23-07-56-664 (1).png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "Picsart_25-05-26_23-07-56-664.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ],
   "shortcuts": [

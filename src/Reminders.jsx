@@ -31,6 +31,7 @@ function Reminders() {
   const [notificationActive, setNotificationActive] = useState(false);
   const audioRef = useRef(null);
   const hapticIntervalRef = useRef(null);
+  const previewAudioRef = useRef(null);
 
   useEffect(() => {
     try {
@@ -278,14 +279,31 @@ function Reminders() {
 
   // --- Sound preview for notification modes ---
   function previewSound(mode) {
+    // Stop any currently playing preview
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current.currentTime = 0;
+      previewAudioRef.current = null;
+    }
     let audio;
     if (mode === 'aggressive') {
       audio = new Audio(aggressiveSoundFile);
     } else {
       audio = new Audio(standardSoundFile);
     }
+    previewAudioRef.current = audio;
     audio.currentTime = 0;
     audio.play().catch(() => {});
+    audio.onended = () => {
+      if (previewAudioRef.current === audio) previewAudioRef.current = null;
+    };
+  }
+  function stopPreviewSound() {
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current.currentTime = 0;
+      previewAudioRef.current = null;
+    }
   }
 
   return (
@@ -340,6 +358,15 @@ function Reminders() {
           aria-label="Preview Aggressive Notification Sound"
         >
           ▶️ Aggressive
+        </button>
+        <button
+          type="button"
+          onClick={stopPreviewSound}
+          style={{ background: 'none', border: 'none', color: '#ffd9e3', cursor: 'pointer', fontSize: '1.1em' }}
+          title="Stop Sound Preview"
+          aria-label="Stop Sound Preview"
+        >
+          ⏹️ Stop
         </button>
         {notificationActive && (
           <button onClick={stopNotification} style={{ background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 6, padding: '0.4rem 1rem', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer' }}>Force Stop</button>

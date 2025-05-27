@@ -9,7 +9,8 @@ import Journal from './Journal';
 import './App.css';
 
 function App() {
-  const [openSection, setOpenSection] = useState(null); // 'reminders' | 'schedule' | 'calendar' | 'voice' | 'journal' | null
+  // Set 'reminders' as the default section
+  const [openSection, setOpenSection] = useState('reminders'); // 'reminders' | 'schedule' | 'calendar' | 'voice' | 'journal' | null
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
 
