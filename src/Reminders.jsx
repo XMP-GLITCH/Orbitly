@@ -188,9 +188,8 @@ function Reminders() {
       }, 500);
       setTimeout(() => stopNotification(), 9000);
     } else {
-      // Standard: haptic for audio duration
-      audio.onloadedmetadata = () => {
-        const len = audio.duration || 9;
+      // Standard: haptic for audio duration, fallback to 9s if metadata fails
+      const startHaptic = (len) => {
         let elapsed = 0;
         hapticIntervalRef.current = setInterval(() => {
           if (navigator.vibrate) navigator.vibrate([50, 100]);
@@ -202,12 +201,22 @@ function Reminders() {
         }, 500);
         setTimeout(() => stopNotification(), len * 1000);
       };
+      if (audio.readyState >= 1 && audio.duration) {
+        startHaptic(audio.duration);
+      } else {
+        audio.onloadedmetadata = () => {
+          startHaptic(audio.duration || 9);
+        };
+        // Fallback: if metadata never loads, stop after 9s
+        setTimeout(() => stopNotification(), 9000);
+      }
     }
-    // Show popup
+    // Show popup immediately for user interaction
     setTimeout(() => {
-      window.alert('Reminder! Click OK or Force Stop to dismiss.');
-      stopNotification();
-    }, 1000);
+      if (window.confirm('Reminder! Click OK to dismiss, or use Force Stop.')) {
+        stopNotification();
+      }
+    }, 100);
   }
 
   function stopNotification() {
@@ -267,9 +276,21 @@ function Reminders() {
     };
   }
 
+  // --- Sound preview for notification modes ---
+  function previewSound(mode) {
+    let audio;
+    if (mode === 'aggressive') {
+      audio = new Audio(aggressiveSoundFile);
+    } else {
+      audio = new Audio(standardSoundFile);
+    }
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+  }
+
   return (
     <div style={styles.wrapper}>
-      <h3>🪐 Reminders</h3>
+      <h3 style={{ paddingTop: 32 }}>🪐 Reminders</h3>
       <div style={{
         background: '#2a2233',
         color: '#ffb6c1',
@@ -302,6 +323,24 @@ function Reminders() {
             <option value="aggressive">Aggressive</option>
           </select>
         </label>
+        <button
+          type="button"
+          onClick={() => previewSound('standard')}
+          style={{ background: 'none', border: 'none', color: '#71f7ff', cursor: 'pointer', fontSize: '1.1em' }}
+          title="Preview Standard Sound"
+          aria-label="Preview Standard Notification Sound"
+        >
+          ▶️ Standard
+        </button>
+        <button
+          type="button"
+          onClick={() => previewSound('aggressive')}
+          style={{ background: 'none', border: 'none', color: '#ff6b6b', cursor: 'pointer', fontSize: '1.1em' }}
+          title="Preview Aggressive Sound"
+          aria-label="Preview Aggressive Notification Sound"
+        >
+          ▶️ Aggressive
+        </button>
         {notificationActive && (
           <button onClick={stopNotification} style={{ background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 6, padding: '0.4rem 1rem', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer' }}>Force Stop</button>
         )}

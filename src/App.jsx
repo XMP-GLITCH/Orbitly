@@ -9,7 +9,7 @@ import Journal from './Journal';
 import './App.css';
 
 function App() {
-  const [openSection, setOpenSection] = useState(null); // 'schedule' | 'calendar' | 'voice' | 'journal' | null
+  const [openSection, setOpenSection] = useState(null); // 'reminders' | 'schedule' | 'calendar' | 'voice' | 'journal' | null
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
 
@@ -27,8 +27,16 @@ function App() {
     if (deferredPrompt) {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setShowInstallBanner(false);
+      setShowInstallBanner(false);
+      setDeferredPrompt(null);
+      // If not accepted, re-show banner after a short delay for retry
+      if (outcome !== 'accepted') {
+        setTimeout(() => setShowInstallBanner(true), 2000);
+      }
+    } else {
+      // Fallback: try to open native install prompt if available
+      if (window.matchMedia('(display-mode: browser)').matches && window.navigator.standalone !== true) {
+        window.location.reload(); // reload to re-trigger beforeinstallprompt if possible
       }
     }
   };
@@ -45,6 +53,35 @@ function App() {
     if (navigator.vibrate) {
       navigator.vibrate([30]); // short pulse
     }
+  }
+
+  // Render the current section as a page
+  let sectionContent = null;
+  if (openSection === 'reminders') {
+    sectionContent = <>
+      <button onClick={() => setOpenSection(null)} style={{ position: 'absolute', left: 16, top: 16, background: 'none', border: 'none', color: '#ffd9e3', fontSize: '1.2em', cursor: 'pointer' }} aria-label="Back">← Back</button>
+      <Reminders />
+    </>;
+  } else if (openSection === 'schedule') {
+    sectionContent = <>
+      <button onClick={() => setOpenSection(null)} style={{ position: 'absolute', left: 16, top: 16, background: 'none', border: 'none', color: '#ffd9e3', fontSize: '1.2em', cursor: 'pointer' }} aria-label="Back">← Back</button>
+      <Schedule onClose={() => setOpenSection(null)} />
+    </>;
+  } else if (openSection === 'calendar') {
+    sectionContent = <>
+      <button onClick={() => setOpenSection(null)} style={{ position: 'absolute', left: 16, top: 16, background: 'none', border: 'none', color: '#ffd9e3', fontSize: '1.2em', cursor: 'pointer' }} aria-label="Back">← Back</button>
+      <Calendar />
+    </>;
+  } else if (openSection === 'voice') {
+    sectionContent = <>
+      <button onClick={() => setOpenSection(null)} style={{ position: 'absolute', left: 16, top: 16, background: 'none', border: 'none', color: '#ffd9e3', fontSize: '1.2em', cursor: 'pointer' }} aria-label="Back">← Back</button>
+      <VoiceMemos />
+    </>;
+  } else if (openSection === 'journal') {
+    sectionContent = <>
+      <button onClick={() => setOpenSection(null)} style={{ position: 'absolute', left: 16, top: 16, background: 'none', border: 'none', color: '#ffd9e3', fontSize: '1.2em', cursor: 'pointer' }} aria-label="Back">← Back</button>
+      <Journal />
+    </>;
   }
 
   return (
@@ -66,6 +103,9 @@ function App() {
         color: '#eee',
         fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
         position: 'relative',
+        minHeight: '90vh',
+        display: 'flex',
+        flexDirection: 'column',
       }}>
         {showInstallBanner && (
           <div style={{
@@ -105,45 +145,41 @@ function App() {
             }}>Dismiss</button>
           </div>
         )}
-        <div style={{textAlign: 'center'}}>
-          <Header />
-          <Welcome />
-        </div>
-        <Reminders />
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', margin: '1.5rem 0' }}>
-          <button onClick={() => { triggerHaptic(); setOpenSection(openSection === 'schedule' ? null : 'schedule'); }} style={{ ...buttonStyle, background: openSection === 'schedule' ? '#222' : '#181818', color: openSection === 'schedule' ? '#71f7ff' : '#eee' }}>
-            {openSection === 'schedule' ? 'Hide Schedules' : 'Show Schedules'}
-          </button>
-          <button onClick={() => { triggerHaptic(); setOpenSection(openSection === 'calendar' ? null : 'calendar'); }} style={{ ...buttonStyle, background: openSection === 'calendar' ? '#222' : '#181818', color: openSection === 'calendar' ? '#71f7ff' : '#eee' }}>
-            {openSection === 'calendar' ? 'Hide Calendar' : 'Show Calendar'}
-          </button>
-          <button onClick={() => { triggerHaptic(); setOpenSection(openSection === 'voice' ? null : 'voice'); }} style={{ ...buttonStyle, background: openSection === 'voice' ? '#222' : '#181818', color: openSection === 'voice' ? '#ffd9e3' : '#eee' }}>
-            {openSection === 'voice' ? 'Close Voice Memos' : '🎤 Voice Memos'}
-          </button>
-          <button onClick={() => { triggerHaptic(); setOpenSection(openSection === 'journal' ? null : 'journal'); }} style={{ ...buttonStyle, background: openSection === 'journal' ? '#222' : '#181818', color: openSection === 'journal' ? '#ffd9e3' : '#eee' }}>
-            {openSection === 'journal' ? 'Close Journal' : '📓 Journal'}
-          </button>
-        </div>
-        {openSection === 'schedule' && (
-          <div style={{ marginTop: '1rem' }}>
-            <Schedule onClose={() => setOpenSection(null)} />
-          </div>
+        {!openSection && (
+          <>
+            <div style={{textAlign: 'center'}}>
+              <Header />
+              <Welcome />
+            </div>
+          </>
         )}
-        {openSection === 'calendar' && (
-          <div style={{ marginTop: '1rem' }}>
-            <Calendar />
+        {openSection ? (
+          <div style={{ flex: 1, position: 'relative' }}>
+            {sectionContent}
           </div>
+        ) : (
+          <div style={{ flex: 1 }} />
         )}
-        {openSection === 'voice' && (
-          <div style={{ marginTop: '1rem' }}>
-            <VoiceMemos />
-          </div>
-        )}
-        {openSection === 'journal' && (
-          <div style={{ marginTop: '1rem' }}>
-            <Journal />
-          </div>
-        )}
+        <footer style={{
+          width: '100%',
+          background: '#181818',
+          borderTop: '1px solid #222',
+          borderRadius: '0 0 12px 12px',
+          padding: '0.7rem 0.5rem 0.5rem 0.5rem',
+          display: 'flex',
+          justifyContent: 'space-around',
+          gap: '0.5rem',
+          position: 'sticky',
+          bottom: 0,
+          left: 0,
+          zIndex: 10,
+        }}>
+          <button onClick={() => { triggerHaptic(); setOpenSection('reminders'); }} style={{ ...buttonStyle, background: openSection === 'reminders' ? '#222' : '#181818', color: openSection === 'reminders' ? '#71f7ff' : '#eee', flex: 1 }}>🔔 Reminders</button>
+          <button onClick={() => { triggerHaptic(); setOpenSection('schedule'); }} style={{ ...buttonStyle, background: openSection === 'schedule' ? '#222' : '#181818', color: openSection === 'schedule' ? '#71f7ff' : '#eee', flex: 1 }}>📅 Schedule</button>
+          <button onClick={() => { triggerHaptic(); setOpenSection('calendar'); }} style={{ ...buttonStyle, background: openSection === 'calendar' ? '#222' : '#181818', color: openSection === 'calendar' ? '#71f7ff' : '#eee', flex: 1 }}>🗓️ Calendar</button>
+          <button onClick={() => { triggerHaptic(); setOpenSection('voice'); }} style={{ ...buttonStyle, background: openSection === 'voice' ? '#222' : '#181818', color: openSection === 'voice' ? '#ffd9e3' : '#eee', flex: 1 }}>🎤 Voice</button>
+          <button onClick={() => { triggerHaptic(); setOpenSection('journal'); }} style={{ ...buttonStyle, background: openSection === 'journal' ? '#222' : '#181818', color: openSection === 'journal' ? '#ffd9e3' : '#eee', flex: 1 }}>📓 Journal</button>
+        </footer>
       </div>
     </div>
   );

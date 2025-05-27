@@ -19,3 +19,35 @@ svg {
   margin-left: 8px;
   stroke-width: 1.5;
 }
+
+footer {
+  width: 100%;
+  background: #181818;
+  border-top: 1px solid #222;
+  border-radius: 0 0 12px 12px;
+  padding: 0.7rem 0.5rem 0.5rem 0.5rem;
+  display: flex;
+  justify-content: space-around;
+  gap: 0.5rem;
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+}
+
+footer button {
+  flex: 1;
+  border-radius: 8px;
+  border: none;
+  padding: 0.5rem 0.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  background: #181818;
+  color: #eee;
+  transition: background 0.2s, color 0.2s;
+}
+
+footer button.active {
+  background: #222;
+  color: #71f7ff;
+}

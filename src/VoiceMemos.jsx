@@ -85,7 +85,7 @@ function VoiceMemos() {
   };
 
   return (
-    <div style={{ background: '#181818', borderRadius: 10, boxShadow: '0 0 4px #0ff2', color: '#eee', padding: '1rem', marginBottom: '1rem', maxWidth: 400, marginLeft: 'auto', marginRight: 'auto' }}>
+    <div style={{ background: '#181818', borderRadius: 10, boxShadow: '0 0 4px #0ff2', color: '#eee', padding: '1rem', marginBottom: '1rem', maxWidth: 400, marginLeft: 'auto', marginRight: 'auto', paddingTop: 32 }}>
       <h3 style={{ color: '#ffd9e3', textAlign: 'center', marginBottom: 10, fontSize: '1.1rem' }}>🎤 Voice Memos</h3>
       <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 10 }}>
         <button onClick={recording ? stopRecording : startRecording} style={{

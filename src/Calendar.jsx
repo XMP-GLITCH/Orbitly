@@ -118,10 +118,12 @@ function Calendar({ onClose }) {
       }, 500);
       setTimeout(() => stopNotification(), len * 1000);
     };
+    // Show popup immediately for user interaction
     setTimeout(() => {
-      window.alert('Calendar Event Reminder! Click OK or Force Stop to dismiss.');
-      stopNotification();
-    }, 1000);
+      if (window.confirm('Calendar Event Reminder! Click OK to dismiss, or use Force Stop.')) {
+        stopNotification();
+      }
+    }, 100);
   }
 
   function stopNotification() {
@@ -136,7 +138,7 @@ function Calendar({ onClose }) {
   }
 
   return (
-    <div style={{ background: '#181818', borderRadius: 12, boxShadow: '0 0 8px #0ff2', color: '#eee', position: 'relative', padding: '1.5rem', margin: 0 }}>
+    <div style={{ background: '#181818', borderRadius: 12, boxShadow: '0 0 8px #0ff2', color: '#eee', position: 'relative', padding: '2.5rem 1.5rem 1.5rem 1.5rem', margin: 0 }}>
       <h3 style={{ color: '#ffd9e3', marginBottom: 12, textAlign: 'center' }}>🗓️ Calendar</h3>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, position: 'relative' }}>
         <button onClick={() => { triggerHaptic(); setCurrentMonth(m => ({ year: m.month === 0 ? m.year - 1 : m.year, month: m.month === 0 ? 11 : m.month - 1 })); }} style={navBtnStyle}>&lt;</button>
@@ -237,6 +239,11 @@ function Calendar({ onClose }) {
         </label>
         <button onClick={handleAddEvent} style={{ ...navBtnStyle, background: '#71f7ff', color: '#181818', fontWeight: 600 }}>Add</button>
       </div>
+      {notificationActive && (
+        <button onClick={stopNotification} style={{ background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 6, padding: '0.4rem 1rem', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', marginTop: 12 }}>
+          Force Stop Notification
+        </button>
+      )}
     </div>
   );
 }

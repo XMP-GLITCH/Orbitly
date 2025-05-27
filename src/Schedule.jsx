@@ -72,11 +72,19 @@ function Schedule({ onClose }) {
   function playReminderSound() {
     if (notificationActive) return;
     setNotificationActive(true);
-    const audio = new Audio(notificationMode === 'aggressive' ? aggressiveSoundFile : standardSoundFile);
+    let audio, duration;
+    if (notificationMode === 'aggressive') {
+      audio = new Audio(aggressiveSoundFile);
+      duration = 9000;
+    } else {
+      audio = new Audio(standardSoundFile);
+      duration = null; // Use audio duration
+    }
     audioRef.current = audio;
     audio.currentTime = 0;
     audio.play().catch(() => {});
-    if (notificationMode === 'standard') {
+    // Haptic feedback
+    if (notificationMode === 'aggressive') {
       let elapsed = 0;
       hapticIntervalRef.current = setInterval(() => {
         if (navigator.vibrate) navigator.vibrate([50, 100]);
@@ -86,12 +94,36 @@ function Schedule({ onClose }) {
           setNotificationActive(false);
         }
       }, 500);
+      setTimeout(() => stopNotification(), 9000);
     } else {
-      if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
-      setTimeout(() => setNotificationActive(false), 9000);
+      // Standard: haptic for audio duration, fallback to 9s if metadata fails
+      const startHaptic = (len) => {
+        let elapsed = 0;
+        hapticIntervalRef.current = setInterval(() => {
+          if (navigator.vibrate) navigator.vibrate([50, 100]);
+          elapsed += 0.5;
+          if (elapsed >= len) {
+            clearInterval(hapticIntervalRef.current);
+            setNotificationActive(false);
+          }
+        }, 500);
+        setTimeout(() => stopNotification(), len * 1000);
+      };
+      if (audio.readyState >= 1 && audio.duration) {
+        startHaptic(audio.duration);
+      } else {
+        audio.onloadedmetadata = () => {
+          startHaptic(audio.duration || 9);
+        };
+        setTimeout(() => stopNotification(), 9000);
+      }
     }
-    window.alert('Reminder! Click OK or Force Stop to dismiss.');
-    stopNotification();
+    // Show popup immediately for user interaction
+    setTimeout(() => {
+      if (window.confirm('Reminder! Click OK to dismiss, or use Force Stop.')) {
+        stopNotification();
+      }
+    }, 100);
   }
 
   function stopNotification() {
@@ -235,8 +267,20 @@ function Schedule({ onClose }) {
     });
   }, [daily, weekly]);
 
+  // --- Sound preview for notification modes ---
+  function previewSound(mode) {
+    let audio;
+    if (mode === 'aggressive') {
+      audio = new Audio(aggressiveSoundFile);
+    } else {
+      audio = new Audio(standardSoundFile);
+    }
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+  }
+
   return (
-    <div style={{ position: 'relative', background: '#181818', borderRadius: 8, padding: '1.5rem', boxShadow: '0 0 8px #0ff2', color: '#eee' }}>
+    <div style={{ position: 'relative', background: '#181818', borderRadius: 8, padding: '1.5rem', boxShadow: '0 0 8px #0ff2', color: '#eee', paddingTop: 32 }}>
       {onClose && (
         <button
           onClick={onClose}
@@ -281,6 +325,24 @@ function Schedule({ onClose }) {
             <option value="aggressive">Aggressive</option>
           </select>
         </label>
+        <button
+          type="button"
+          onClick={() => previewSound('standard')}
+          style={{ background: 'none', border: 'none', color: '#71f7ff', cursor: 'pointer', fontSize: '1.1em' }}
+          title="Preview Standard Sound"
+          aria-label="Preview Standard Notification Sound"
+        >
+          ▶️ Standard
+        </button>
+        <button
+          type="button"
+          onClick={() => previewSound('aggressive')}
+          style={{ background: 'none', border: 'none', color: '#ff6b6b', cursor: 'pointer', fontSize: '1.1em' }}
+          title="Preview Aggressive Sound"
+          aria-label="Preview Aggressive Notification Sound"
+        >
+          ▶️ Aggressive
+        </button>
         {notificationActive && (
           <button onClick={stopNotification} style={{ background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 6, padding: '0.4rem 1rem', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer' }}>Force Stop</button>
         )}
