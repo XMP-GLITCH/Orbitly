@@ -28,12 +28,12 @@ function App() {
     if (deferredPrompt) {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
-      setShowInstallBanner(false);
-      setDeferredPrompt(null);
-      // If not accepted, re-show banner after a short delay for retry
-      if (outcome !== 'accepted') {
+      if (outcome === 'accepted') {
+        setShowInstallBanner(false);
+      } else {
         setTimeout(() => setShowInstallBanner(true), 2000);
       }
+      setDeferredPrompt(null); // Only clear after prompt
     } else {
       // Fallback: try to open native install prompt if available
       if (window.matchMedia('(display-mode: browser)').matches && window.navigator.standalone !== true) {
@@ -289,14 +289,14 @@ function App() {
             display: 'flex',
             width: '100%',
             maxWidth: 450,
-            justifyContent: 'space-between',
+            justifyContent: 'space-evenly', // evenly space all section buttons
             alignItems: 'center',
             gap: 0,
           }}>
-            <button style={{ ...buttonStyle, flex: 1, minWidth: 0, fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)', padding: '0.5em 0.2em' }} onClick={() => { triggerHaptic(); setOpenSection('schedule'); }}>📅 Schedule</button>
-            <button style={{ ...buttonStyle, flex: 1, minWidth: 0, fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)', padding: '0.5em 0.2em' }} onClick={() => { triggerHaptic(); setOpenSection('calendar'); }}>🗓️ Calendar</button>
-            <button style={{ ...buttonStyle, flex: 1, minWidth: 0, fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)', padding: '0.5em 0.2em' }} onClick={() => { triggerHaptic(); setOpenSection('voice'); }}>🎤 Voice</button>
-            <button style={{ ...buttonStyle, flex: 1, minWidth: 0, fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)', padding: '0.5em 0.2em' }} onClick={() => { triggerHaptic(); setOpenSection('journal'); }}>📓 Journal</button>
+            <button style={{ ...buttonStyle, flex: 1, minWidth: 0, fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)', padding: '0.5em 0.2em' }} onClick={() => { triggerHaptic(); setOpenSection('schedule'); }}>Schedule</button>
+            <button style={{ ...buttonStyle, flex: 1, minWidth: 0, fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)', padding: '0.5em 0.2em' }} onClick={() => { triggerHaptic(); setOpenSection('calendar'); }}>Calendar</button>
+            <button style={{ ...buttonStyle, flex: 1, minWidth: 0, fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)', padding: '0.5em 0.2em' }} onClick={() => { triggerHaptic(); setOpenSection('voice'); }}>Voice</button>
+            <button style={{ ...buttonStyle, flex: 1, minWidth: 0, fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)', padding: '0.5em 0.2em' }} onClick={() => { triggerHaptic(); setOpenSection('journal'); }}>Journal</button>
           </div>
         </footer>
       </div>
