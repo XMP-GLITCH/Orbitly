@@ -1,6 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
-import standardSoundFile from './assets/mixkit-correct-answer-tone-2870.wav';
-import aggressiveSoundFile from './assets/mixkit-urgent-simple-tone-loop-2976.wav';
+import { useState, useEffect } from 'react';
 
 function Schedule({ onClose }) {
   const [daily, setDaily] = useState([]); // Array of daily entries
@@ -18,124 +16,34 @@ function Schedule({ onClose }) {
   const [weeklyReminders, setWeeklyReminders] = useState({
     Monday: false, Tuesday: false, Wednesday: false, Thursday: false, Friday: false, Saturday: false, Sunday: false
   });
-  const [notificationMode, setNotificationMode] = useState(() => {
-    try {
-      return localStorage.getItem('orbitly_notification_mode') || 'standard';
-    } catch {
-      return 'standard';
-    }
-  });
-  const [notificationActive, setNotificationActive] = useState(false);
-  const audioRef = useRef(null);
-  const hapticIntervalRef = useRef(null);
 
-  // Load from localStorage
+  // Robust localStorage load for daily and weekly
   useEffect(() => {
     const d = localStorage.getItem('orbitly_daily');
     const w = localStorage.getItem('orbitly_weekly');
     if (d) {
       try {
         const parsed = JSON.parse(d);
-        setDaily(Array.isArray(parsed) ? parsed : []);
+        if (!Array.isArray(parsed)) throw new Error('Corrupted daily data');
+        setDaily(parsed);
       } catch {
+        localStorage.removeItem('orbitly_daily');
         setDaily([]);
       }
     }
     if (w) {
       try {
         const parsed = JSON.parse(w);
-        if (
-          parsed && typeof parsed === 'object' &&
-          Object.keys(parsed).every(day => Array.isArray(parsed[day]))
-        ) {
-          setWeekly(parsed);
-        } else {
-          setWeekly({
-            Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [], Saturday: [], Sunday: []
-          });
-        }
+        if (!parsed || typeof parsed !== 'object' || !Object.keys(parsed).every(day => Array.isArray(parsed[day]))) throw new Error('Corrupted weekly data');
+        setWeekly(parsed);
       } catch {
+        localStorage.removeItem('orbitly_weekly');
         setWeekly({
           Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [], Saturday: [], Sunday: []
         });
       }
     }
   }, []);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('orbitly_notification_mode', notificationMode);
-    } catch {}
-  }, [notificationMode]);
-
-  // Play reminder sound
-  function playReminderSound() {
-    if (notificationActive) return;
-    setNotificationActive(true);
-    let audio, duration;
-    if (notificationMode === 'aggressive') {
-      audio = new Audio(aggressiveSoundFile);
-      duration = 9000;
-    } else {
-      audio = new Audio(standardSoundFile);
-      duration = null; // Use audio duration
-    }
-    audioRef.current = audio;
-    audio.currentTime = 0;
-    audio.play().catch(() => {});
-    // Haptic feedback
-    if (notificationMode === 'aggressive') {
-      let elapsed = 0;
-      hapticIntervalRef.current = setInterval(() => {
-        if (navigator.vibrate) navigator.vibrate([50, 100]);
-        elapsed += 0.5;
-        if (elapsed >= 9) {
-          clearInterval(hapticIntervalRef.current);
-          setNotificationActive(false);
-        }
-      }, 500);
-      setTimeout(() => stopNotification(), 9000);
-    } else {
-      // Standard: haptic for audio duration, fallback to 9s if metadata fails
-      const startHaptic = (len) => {
-        let elapsed = 0;
-        hapticIntervalRef.current = setInterval(() => {
-          if (navigator.vibrate) navigator.vibrate([50, 100]);
-          elapsed += 0.5;
-          if (elapsed >= len) {
-            clearInterval(hapticIntervalRef.current);
-            setNotificationActive(false);
-          }
-        }, 500);
-        setTimeout(() => stopNotification(), len * 1000);
-      };
-      if (audio.readyState >= 1 && audio.duration) {
-        startHaptic(audio.duration);
-      } else {
-        audio.onloadedmetadata = () => {
-          startHaptic(audio.duration || 9);
-        };
-        setTimeout(() => stopNotification(), 9000);
-      }
-    }
-    // Show popup immediately for user interaction
-    setTimeout(() => {
-      if (window.confirm('Reminder! Click OK to dismiss, or use Force Stop.')) {
-        stopNotification();
-      }
-    }, 100);
-  }
-
-  function stopNotification() {
-    setNotificationActive(false);
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-    if (hapticIntervalRef.current) {
-      clearInterval(hapticIntervalRef.current);
-    }
-  }
 
   // Schedule task notifications
   function scheduleTaskNotifications(dateStr, timeStr, taskText, isDaily) {
@@ -163,21 +71,36 @@ function Schedule({ onClose }) {
       if (timeout > 0) {
         setTimeout(() => {
           new Notification('Orbitly Task Reminder', { body: `${taskText} (${isDaily ? timeStr : dateStr + ' ' + timeStr})` });
-          playReminderSound();
         }, timeout);
       }
     });
   }
 
+  // Robust localStorage save for daily
+  const saveDaily = (newDaily) => {
+    setDaily(newDaily);
+    try {
+      localStorage.setItem('orbitly_daily', JSON.stringify(newDaily));
+    } catch (e) {
+      alert('Failed to save daily schedule. Local storage may be full or unavailable.');
+    }
+  };
+  // Robust localStorage save for weekly
+  const saveWeekly = (newWeekly) => {
+    setWeekly(newWeekly);
+    try {
+      localStorage.setItem('orbitly_weekly', JSON.stringify(newWeekly));
+    } catch (e) {
+      alert('Failed to save weekly schedule. Local storage may be full or unavailable.');
+    }
+  };
+
   // Add daily entry
   const addDailyEntry = () => {
     const { task, time } = dailyInput;
     if (!task.trim()) return;
-    setDaily(prev => {
-      const updated = [...prev, { task, time: time || '', reminder: dailyReminder }];
-      localStorage.setItem('orbitly_daily', JSON.stringify(updated));
-      return updated;
-    });
+    const updated = [...daily, { task, time: time || '', reminder: dailyReminder }];
+    saveDaily(updated);
     if (dailyReminder && time) scheduleTaskNotifications('', time, dailyInput.task, true);
     setDailyInput({ task: '', time: '' });
     setDailyReminder(false);
@@ -187,14 +110,11 @@ function Schedule({ onClose }) {
   const addWeeklyEntry = (day) => {
     const { task, time, date } = weeklyInputs[day];
     if (!task.trim() || !time || !date) return;
-    setWeekly(prev => {
-      const updated = {
-        ...prev,
-        [day]: [...prev[day], { task, time, date, reminder: weeklyReminders[day] }]
-      };
-      localStorage.setItem('orbitly_weekly', JSON.stringify(updated));
-      return updated;
-    });
+    const updated = {
+      ...weekly,
+      [day]: [...weekly[day], { task, time, date, reminder: weeklyReminders[day] }]
+    };
+    saveWeekly(updated);
     if (weeklyReminders[day]) scheduleTaskNotifications(date, time, weeklyInputs[day].task, false);
     setWeeklyInputs(prev => ({ ...prev, [day]: { task: '', time: '', date: '' } }));
     setWeeklyReminders(prev => ({ ...prev, [day]: false }));
@@ -202,38 +122,29 @@ function Schedule({ onClose }) {
 
   // Edit daily entry
   const editDailyEntry = (idx, newTask, newTime) => {
-    setDaily(prev => {
-      const updated = prev.map((entry, i) =>
-        i === idx ? { ...entry, task: newTask, time: newTime } : entry
-      );
-      localStorage.setItem('orbitly_daily', JSON.stringify(updated));
-      return updated;
-    });
+    const updated = daily.map((entry, i) =>
+      i === idx ? { ...entry, task: newTask, time: newTime } : entry
+    );
+    saveDaily(updated);
     setEditingDaily({ idx: null, task: '', time: '' });
   };
 
   // Edit weekly entry
   const editWeeklyEntry = (day, idx, newTask, newTime, newDate) => {
-    setWeekly(prev => {
-      const updated = {
-        ...prev,
-        [day]: prev[day].map((entry, i) =>
-          i === idx ? { ...entry, task: newTask, time: newTime, date: newDate } : entry
-        )
-      };
-      localStorage.setItem('orbitly_weekly', JSON.stringify(updated));
-      return updated;
-    });
+    const updated = {
+      ...weekly,
+      [day]: weekly[day].map((entry, i) =>
+        i === idx ? { ...entry, task: newTask, time: newTime, date: newDate } : entry
+      )
+    };
+    saveWeekly(updated);
     setEditingWeekly({ day: null, idx: null, task: '', time: '', date: '' });
   };
 
   // Delete daily entry
   const deleteDailyEntry = (idx) => {
-    setDaily(prev => {
-      const updated = prev.filter((_, i) => i !== idx);
-      localStorage.setItem('orbitly_daily', JSON.stringify(updated));
-      return updated;
-    });
+    const updated = daily.filter((_, i) => i !== idx);
+    saveDaily(updated);
     if (editingDaily.idx === idx) {
       setEditingDaily({ idx: null, task: '', time: '' });
     }
@@ -241,14 +152,11 @@ function Schedule({ onClose }) {
 
   // Delete weekly entry
   const deleteWeeklyEntry = (day, idx) => {
-    setWeekly(prev => {
-      const updated = {
-        ...prev,
-        [day]: prev[day].filter((_, i) => i !== idx)
-      };
-      localStorage.setItem('orbitly_weekly', JSON.stringify(updated));
-      return updated;
-    });
+    const updated = {
+      ...weekly,
+      [day]: weekly[day].filter((_, i) => i !== idx)
+    };
+    saveWeekly(updated);
     if (editingWeekly.day === day && editingWeekly.idx === idx) {
       setEditingWeekly({ day: null, idx: null, task: '', time: '', date: '' });
     }
@@ -266,18 +174,6 @@ function Schedule({ onClose }) {
       });
     });
   }, [daily, weekly]);
-
-  // --- Sound preview for notification modes ---
-  function previewSound(mode) {
-    let audio;
-    if (mode === 'aggressive') {
-      audio = new Audio(aggressiveSoundFile);
-    } else {
-      audio = new Audio(standardSoundFile);
-    }
-    audio.currentTime = 0;
-    audio.play().catch(() => {});
-  }
 
   return (
     <div style={{ position: 'relative', background: '#181818', borderRadius: 8, padding: '1.5rem', boxShadow: '0 0 8px #0ff2', color: '#eee', paddingTop: 32 }}>
@@ -316,52 +212,6 @@ function Schedule({ onClose }) {
         >
           Weekly
         </button>
-      </div>
-      <div style={{ marginBottom: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
-        <label style={{ color: '#eee', fontSize: '0.98em', marginRight: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontWeight: 500 }}>Notification Mode:</span>
-          <select 
-            value={notificationMode} 
-            onChange={e => {
-              setNotificationMode(e.target.value);
-              // Play sound immediately on change
-              let audio;
-              if (e.target.value === 'aggressive') {
-                audio = new Audio(aggressiveSoundFile);
-                audio.currentTime = 0;
-                audio.play().catch(() => {});
-                setTimeout(() => {
-                  audio.pause();
-                  audio.currentTime = 0;
-                }, 1300); // Play aggressive sound for 1.3 seconds only
-              } else {
-                audio = new Audio(standardSoundFile);
-                audio.currentTime = 0;
-                audio.play().catch(() => {});
-              }
-            }} 
-            style={{
-              background: '#181818',
-              color: '#71f7ff',
-              border: '1px solid #333',
-              borderRadius: 6,
-              padding: '0.3em 1.2em 0.3em 0.7em',
-              fontSize: '1em',
-              fontWeight: 500,
-              outline: 'none',
-              boxShadow: '0 0 4px #0ff2',
-              appearance: 'none',
-              minWidth: 110,
-              transition: 'border 0.2s, box-shadow 0.2s',
-            }}
-          >
-            <option value="standard">Standard</option>
-            <option value="aggressive">Aggressive</option>
-          </select>
-        </label>
-        {notificationActive && (
-          <button onClick={stopNotification} style={{ background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 6, padding: '0.4rem 1rem', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', marginLeft: 8 }}>Force Stop</button>
-        )}
       </div>
       {view === 'daily' ? (
         <div>

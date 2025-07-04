@@ -7,7 +7,19 @@ function Reminders() {
   const [task, setTask] = useState('');
   const [reminderDate, setReminderDate] = useState('');
   const [reminderTime, setReminderTime] = useState('');
-  const [reminders, setReminders] = useState([]);
+  // Robust localStorage load for reminders
+  const [reminders, setReminders] = useState(() => {
+    try {
+      const stored = localStorage.getItem('orbitly_reminders');
+      if (!stored) return [];
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed)) throw new Error('Corrupted data');
+      return parsed;
+    } catch (e) {
+      localStorage.removeItem('orbitly_reminders');
+      return [];
+    }
+  });
   const [editingIdx, setEditingIdx] = useState(null);
   const [editingTask, setEditingTask] = useState('');
   const [editingDate, setEditingDate] = useState('');
@@ -21,52 +33,27 @@ function Reminders() {
       return false;
     }
   });
-  const [notificationMode, setNotificationMode] = useState(() => {
-    try {
-      return localStorage.getItem('orbitly_notification_mode') || 'standard';
-    } catch {
-      return 'standard';
-    }
-  });
   const [notificationActive, setNotificationActive] = useState(false);
   const audioRef = useRef(null);
   const hapticIntervalRef = useRef(null);
   const previewAudioRef = useRef(null);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('orbitly_reminders');
-      if (stored) {
-        setReminders(JSON.parse(stored));
-        console.log('[Reminders] Loaded from localStorage:', stored);
-      }
-    } catch (e) {
-      setReminders([]);
-      console.error('[Reminders] Failed to load reminders:', e);
-    }
-  }, []);
-
-  // Request notification permission on mount
-  useEffect(() => {
+    // Request notification permission on mount
     if ('Notification' in window) {
       Notification.requestPermission();
     }
   }, []);
 
-  useEffect(() => {
+  // Robust localStorage save for reminders
+  const saveReminders = (newReminders) => {
+    setReminders(newReminders);
     try {
-      localStorage.setItem('orbitly_reminders', JSON.stringify(reminders));
+      localStorage.setItem('orbitly_reminders', JSON.stringify(newReminders));
     } catch (e) {
-      console.error('[Reminders] Failed to persist reminders:', e);
+      alert('Failed to save reminders. Local storage may be full or unavailable.');
     }
-  }, [reminders]);
-
-  // Save notification mode
-  useEffect(() => {
-    try {
-      localStorage.setItem('orbitly_notification_mode', notificationMode);
-    } catch {}
-  }, [notificationMode]);
+  };
 
   const addReminder = () => {
     if (task.trim() === '') return;
@@ -75,7 +62,8 @@ function Reminders() {
       newReminder.date = reminderDate;
       newReminder.time = reminderTime;
     }
-    setReminders(prev => [newReminder, ...prev]); // Add new reminder to the top (stack format)
+    const updated = [newReminder, ...reminders];
+    saveReminders(updated);
     setTask('');
     setReminderDate('');
     setReminderTime('');
@@ -91,7 +79,7 @@ function Reminders() {
   };
 
   const saveEdit = (idx) => {
-    setReminders(prev => prev.map((r, i) => {
+    const updated = reminders.map((r, i) => {
       if (i !== idx) return r;
       const updatedR = { ...r, task: editingTask };
       if (editingShowDateTime && editingDate && editingTime) {
@@ -102,7 +90,8 @@ function Reminders() {
         delete updatedR.time;
       }
       return updatedR;
-    }));
+    });
+    saveReminders(updated);
     setEditingIdx(null);
     setEditingTask('');
     setEditingDate('');
@@ -119,7 +108,8 @@ function Reminders() {
   };
 
   const deleteReminder = (idx) => {
-    setReminders(prev => prev.filter((_, i) => i !== idx));
+    const updated = reminders.filter((_, i) => i !== idx);
+    saveReminders(updated);
     if (editingIdx === idx) {
       setEditingIdx(null);
       setEditingTask('');
@@ -128,6 +118,27 @@ function Reminders() {
       setEditingShowDateTime(false);
     }
   };
+
+  const [loaded, setLoaded] = useState(false);
+  // Load reminders from localStorage once on mount
+  useEffect(() => {
+    if (loaded) return;
+    setLoaded(true);
+    try {
+      const stored = localStorage.getItem('orbitly_reminders');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setReminders(parsed);
+          console.log('[Reminders] Loaded from localStorage:', parsed);
+        } else {
+          console.error('[Reminders] Corrupted data, using empty array:', stored);
+        }
+      }
+    } catch (e) {
+      console.error('[Reminders] Failed to load reminders:', e);
+    }
+  }, [loaded]);
 
   // Auto-delete logic: filter reminders after load and on change if enabled
   useEffect(() => {
@@ -161,12 +172,14 @@ function Reminders() {
     } catch {}
   }, [autoDelete]);
 
+  const [notificationTimeouts, setNotificationTimeouts] = useState([]);
+
   // Helper to play reminder sound with haptic and popup
   function playReminderSound() {
     if (notificationActive) return;
     setNotificationActive(true);
     let audio, duration;
-    if (notificationMode === 'aggressive') {
+    if (true) {
       audio = new Audio(aggressiveSoundFile);
       duration = 9000;
     } else {
@@ -177,7 +190,7 @@ function Reminders() {
     audio.currentTime = 0;
     audio.play().catch(() => {});
     // Haptic feedback
-    if (notificationMode === 'aggressive') {
+    if (true) {
       let elapsed = 0;
       hapticIntervalRef.current = setInterval(() => {
         if (navigator.vibrate) navigator.vibrate([50, 100]);
@@ -300,35 +313,6 @@ function Reminders() {
     };
   }
 
-  // --- Sound preview for notification modes ---
-  function previewSound(mode) {
-    // Stop any currently playing preview
-    if (previewAudioRef.current) {
-      previewAudioRef.current.pause();
-      previewAudioRef.current.currentTime = 0;
-      previewAudioRef.current = null;
-    }
-    let audio;
-    if (mode === 'aggressive') {
-      audio = new Audio(aggressiveSoundFile);
-    } else {
-      audio = new Audio(standardSoundFile);
-    }
-    previewAudioRef.current = audio;
-    audio.currentTime = 0;
-    audio.play().catch(() => {});
-    audio.onended = () => {
-      if (previewAudioRef.current === audio) previewAudioRef.current = null;
-    };
-  }
-  function stopPreviewSound() {
-    if (previewAudioRef.current) {
-      previewAudioRef.current.pause();
-      previewAudioRef.current.currentTime = 0;
-      previewAudioRef.current = null;
-    }
-  }
-
   return (
     <div style={styles.wrapper}>
       <h3 style={{ paddingTop: 32, textAlign: 'left' }}>🪐 Reminders</h3>
@@ -344,47 +328,6 @@ function Reminders() {
         </label>
       </div>
       <div style={{ marginBottom: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
-        <label style={{ color: '#eee', fontSize: '0.98em', marginRight: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontWeight: 500 }}>Notification Mode:</span>
-          <select 
-            value={notificationMode} 
-            onChange={e => {
-              setNotificationMode(e.target.value);
-              // Play sound immediately on change
-              let audio;
-              if (e.target.value === 'aggressive') {
-                audio = new Audio(aggressiveSoundFile);
-                audio.currentTime = 0;
-                audio.play().catch(() => {});
-                setTimeout(() => {
-                  audio.pause();
-                  audio.currentTime = 0;
-                }, 1300); // Play aggressive sound for 1.3 seconds only
-              } else {
-                audio = new Audio(standardSoundFile);
-                audio.currentTime = 0;
-                audio.play().catch(() => {});
-              }
-            }} 
-            style={{
-              background: '#181818',
-              color: '#71f7ff',
-              border: '1px solid #333',
-              borderRadius: 6,
-              padding: '0.3em 1.2em 0.3em 0.7em',
-              fontSize: '1em',
-              fontWeight: 500,
-              outline: 'none',
-              boxShadow: '0 0 4px #0ff2',
-              appearance: 'none',
-              minWidth: 110,
-              transition: 'border 0.2s, box-shadow 0.2s',
-            }}
-          >
-            <option value="standard">Standard</option>
-            <option value="aggressive">Aggressive</option>
-          </select>
-        </label>
         {notificationActive && (
           <button onClick={stopNotification} style={{ background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 6, padding: '0.4rem 1rem', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', marginLeft: 8 }}>Force Stop</button>
         )}

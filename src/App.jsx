@@ -95,6 +95,7 @@ function App() {
         >
           ✕
         </button>
+      
       </div>
     );
   } else if (openSection === 'journal') {
@@ -111,69 +112,6 @@ function App() {
       </div>
     );
   }
-
-  // Push Notification Logic
-  useEffect(() => {
-    // Only run in browser
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-
-    let swReg = null;
-    let vapidKey = null;
-
-    // Get VAPID public key from backend
-    fetch('http://localhost:4000/vapidPublicKey')
-      .then(res => res.json())
-      .then(data => {
-        vapidKey = data.key;
-        return navigator.serviceWorker.register('/service-worker.js');
-      })
-      .then(reg => {
-        swReg = reg;
-        return swReg.pushManager.getSubscription();
-      })
-      .then(async (sub) => {
-        if (!sub && vapidKey) {
-          // Subscribe user
-          const convertedVapidKey = urlBase64ToUint8Array(vapidKey);
-          const newSub = await swReg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: convertedVapidKey
-          });
-          // Send subscription to backend
-          await fetch('http://localhost:4000/subscribe', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newSub)
-          });
-        } else if (sub) {
-          // Already subscribed, ensure backend knows
-          await fetch('http://localhost:4000/subscribe', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(sub)
-          });
-        }
-      })
-      .catch(err => {
-        // Ignore if user blocks or unsupported
-        // Optionally show a warning in UI
-        // console.error('Push setup error', err);
-      });
-
-    // Helper to convert VAPID key
-    function urlBase64ToUint8Array(base64String) {
-      const padding = '='.repeat((4 - base64String.length % 4) % 4);
-      const base64 = (base64String + padding)
-        .replace(/-/g, '+')
-        .replace(/_/g, '/');
-      const rawData = window.atob(base64);
-      const outputArray = new Uint8Array(rawData.length);
-      for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
-      }
-      return outputArray;
-    }
-  }, []);
 
   // Always prompt for install if not installed
   useEffect(() => {

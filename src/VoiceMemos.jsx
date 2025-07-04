@@ -3,11 +3,16 @@ import Journal from './Journal';
 
 function VoiceMemos() {
   const [recording, setRecording] = useState(false);
+  // Robust localStorage load for memos
   const [memos, setMemos] = useState(() => {
     try {
       const stored = localStorage.getItem('orbitly_voice_memos');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
+      if (!stored) return [];
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed)) throw new Error('Corrupted data');
+      return parsed;
+    } catch (e) {
+      localStorage.removeItem('orbitly_voice_memos');
       return [];
     }
   });
@@ -36,7 +41,12 @@ function VoiceMemos() {
           const newMemo = { url: base64data, date: new Date().toISOString(), name: 'Voice Memo' };
           setMemos(prev => {
             const updated = [newMemo, ...prev];
-            localStorage.setItem('orbitly_voice_memos', JSON.stringify(updated));
+            // Robust localStorage save for memos
+            try {
+              localStorage.setItem('orbitly_voice_memos', JSON.stringify(updated));
+            } catch (e) {
+              alert('Failed to save voice memos. Local storage may be full or unavailable.');
+            }
             return updated;
           });
         };
@@ -57,11 +67,14 @@ function VoiceMemos() {
   };
 
   const deleteMemo = (idx) => {
-    setMemos(prev => {
-      const updated = prev.filter((_, i) => i !== idx);
+    const updated = memos.filter((_, i) => i !== idx);
+    setMemos(updated);
+    // Robust localStorage save for memos
+    try {
       localStorage.setItem('orbitly_voice_memos', JSON.stringify(updated));
-      return updated;
-    });
+    } catch (e) {
+      alert('Failed to save voice memos. Local storage may be full or unavailable.');
+    }
   };
 
   const startEdit = (idx) => {
@@ -70,11 +83,14 @@ function VoiceMemos() {
   };
 
   const saveEdit = (idx) => {
-    setMemos(prev => {
-      const updated = prev.map((m, i) => i === idx ? { ...m, name: editingName || 'Voice Memo' } : m);
+    const updated = memos.map((m, i) => i === idx ? { ...m, name: editingName || 'Voice Memo' } : m);
+    setMemos(updated);
+    // Robust localStorage save for memos
+    try {
       localStorage.setItem('orbitly_voice_memos', JSON.stringify(updated));
-      return updated;
-    });
+    } catch (e) {
+      alert('Failed to save voice memos. Local storage may be full or unavailable.');
+    }
     setEditingIdx(null);
     setEditingName('');
   };

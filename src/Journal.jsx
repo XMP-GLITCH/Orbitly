@@ -1,11 +1,16 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 function Journal() {
+  // Robust localStorage load
   const [entries, setEntries] = useState(() => {
     try {
       const stored = localStorage.getItem('orbitly_journal_entries');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
+      if (!stored) return [];
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed)) throw new Error('Corrupted data');
+      return parsed;
+    } catch (e) {
+      localStorage.removeItem('orbitly_journal_entries');
       return [];
     }
   });
@@ -23,9 +28,14 @@ function Journal() {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
+  // Robust localStorage save
   const saveEntries = (newEntries) => {
     setEntries(newEntries);
-    localStorage.setItem('orbitly_journal_entries', JSON.stringify(newEntries));
+    try {
+      localStorage.setItem('orbitly_journal_entries', JSON.stringify(newEntries));
+    } catch (e) {
+      alert('Failed to save journal entries. Local storage may be full or unavailable.');
+    }
   };
 
   // Attachment popup logic
@@ -138,7 +148,8 @@ function Journal() {
         date: new Date().toISOString(),
         attachments: attachments,
       };
-      saveEntries([newEntry, ...entries]);
+      const updated = [newEntry, ...entries];
+      saveEntries(updated);
       setText('');
       setAttachments([]);
       setAttachmentPreviews([]);
@@ -159,6 +170,7 @@ function Journal() {
     const updated = entries.map((e, i) => i === idx ? { ...e, text: editingText } : e);
     saveEntries(updated);
     setEditingIdx(null);
+
     setEditingText('');
   };
 
@@ -167,65 +179,153 @@ function Journal() {
     setEditingText('');
   };
 
+  // PWA install prompt logic
+  useEffect(() => {
+    // Only show install prompt if not running as a standalone/native app
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+      return;
+    }
+    let deferredPrompt = null;
+    function beforeInstallHandler(e) {
+      e.preventDefault();
+      deferredPrompt = e;
+      window.orbitlyShowInstall = () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then(() => {
+            deferredPrompt = null;
+          });
+        }
+      };
+      // Optionally, show a custom install button in your UI
+      window.dispatchEvent(new CustomEvent('orbitly-install-available'));
+    }
+    window.addEventListener('beforeinstallprompt', beforeInstallHandler);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', beforeInstallHandler);
+    };
+  }, []);
+
   return (
     <div style={{ background: '#181818', borderRadius: 10, boxShadow: '0 0 4px #0ff2', color: '#eee', padding: '1rem', marginBottom: '1rem', maxWidth: 500, marginLeft: 'auto', marginRight: 'auto', position: 'relative', paddingTop: 32 }}>
       <h3 style={{ color: '#ffd9e3', textAlign: 'center', marginBottom: 10, fontSize: '1.1rem' }}>🪐 Journal</h3>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexDirection: 'column', position: 'relative', alignItems: 'stretch' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 400, margin: '0 auto' }}>
+        <button onClick={() => setShowAttachmentPopup(true)} style={{ background: 'none', border: 'none', color: '#71f7ff', fontSize: '1.6em', padding: 0, marginRight: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Add attachment">
+          <span role="img" aria-label="Attachment">📎</span>
+        </button>
         <textarea
           value={text}
           onChange={e => setText(e.target.value)}
           placeholder="Write a new journal entry..."
           rows={3}
-          style={{ width: '100%', borderRadius: 6, border: '1px solid #333', background: '#111', color: '#eee', fontSize: '1em', padding: '0.6rem', resize: 'vertical', minHeight: 60, maxWidth: 400, margin: '0 auto' }}
+          style={{ borderRadius: 20, border: '1px solid #333', background: '#111', color: '#eee', fontSize: '1em', padding: '0.6rem 1rem', resize: 'vertical', minHeight: 48, maxHeight: 120, flex: 1, boxSizing: 'border-box', margin: 0 }}
         />
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-start', width: '100%' }}>
-          <button onClick={() => setShowAttachmentPopup(true)} style={{ background: '#222', color: '#ffd9e3', border: 'none', borderRadius: 6, padding: '0.5rem 1rem', fontWeight: 600, fontSize: '1em', cursor: 'pointer', boxShadow: '0 0 4px #ffd9e3' }}>
-            ➕ Attachment
-          </button>
-          <input id="journal-attachment-input" type="file" multiple accept="image/*,audio/*,video/*" style={{ display: 'none' }} onChange={handleAttachmentChange} />
-        </div>
-        {/* Centered attachment type selector over the main box */}
-        {showAttachmentPopup && (
-          <div style={{ position: 'absolute', left: '50%', top: '100%', transform: 'translate(-50%, 20px)', width: 260, background: '#222', borderRadius: 10, padding: 18, boxShadow: '0 0 8px #0ff2', display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', zIndex: 10 }}>
-            <span style={{ color: '#ffd9e3', fontWeight: 600, fontSize: '1.1em' }}>What type of attachment?</span>
-            <button onClick={() => handleAttachmentType('image')} style={{ background: '#71f7ff', color: '#181818', border: 'none', borderRadius: 6, padding: '0.5rem 1.2rem', fontWeight: 600, fontSize: '1em', cursor: 'pointer', width: '100%' }}>Image</button>
-            <button onClick={() => handleAttachmentType('audio')} style={{ background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 6, padding: '0.5rem 1.2rem', fontWeight: 600, fontSize: '1em', cursor: 'pointer', width: '100%' }}>Record Audio</button>
-            <button onClick={() => setShowAttachmentPopup(false)} style={{ background: 'none', color: '#ffd9e3', border: '1px solid #ffd9e3', borderRadius: 6, padding: '0.4rem 1.2rem', fontWeight: 600, fontSize: '1em', cursor: 'pointer', marginTop: 8, width: '100%' }}>Cancel</button>
-          </div>
-        )}
-        {/* Centered audio recorder over the main box */}
-        {showRecordPopup && (
-          <div style={{ position: 'absolute', left: '50%', top: '100%', transform: 'translate(-50%, 20px)', width: 260, background: '#222', borderRadius: 10, padding: 18, boxShadow: '0 0 8px #0ff2', display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', zIndex: 10 }}>
-            <span style={{ color: '#ffd9e3', fontWeight: 600, fontSize: '1.1em' }}>Record Audio</span>
-            {!recording && !audioURL && (
-              <button onClick={startRecording} style={{ background: '#71f7ff', color: '#181818', border: 'none', borderRadius: 6, padding: '0.5rem 1.2rem', fontWeight: 600, fontSize: '1em', cursor: 'pointer', width: '100%' }}>Start Recording</button>
-            )}
-            {recording && (
-              <button onClick={stopRecording} style={{ background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 6, padding: '0.5rem 1.2rem', fontWeight: 600, fontSize: '1em', cursor: 'pointer', width: '100%' }}>Stop Recording</button>
-            )}
-            {audioURL && !recording && (
-              <>
-                <audio src={audioURL} controls style={{ width: 200 }} />
-                <button onClick={saveAudioAttachment} style={{ background: '#71f7ff', color: '#181818', border: 'none', borderRadius: 6, padding: '0.5rem 1.2rem', fontWeight: 600, fontSize: '1em', cursor: 'pointer', width: '100%' }}>Save Audio</button>
-                <button onClick={() => { setShowRecordPopup(false); setAudioBlob(null); setAudioURL(null); }} style={{ background: 'none', color: '#ffd9e3', border: '1px solid #ffd9e3', borderRadius: 6, padding: '0.4rem 1.2rem', fontWeight: 600, fontSize: '1em', cursor: 'pointer', marginTop: 8, width: '100%' }}>Cancel</button>
-              </>
-            )}
-          </div>
-        )}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {attachmentPreviews.map((att, i) => (
-            att.type === 'image' ? (
-              <img key={i} src={att.data} alt={att.name} style={{ maxWidth: 80, maxHeight: 80, borderRadius: 6 }} />
-            ) : att.type === 'audio' ? (
-              <audio key={i} src={att.data} controls style={{ maxWidth: 120 }} />
-            ) : att.type === 'video' ? (
-              <video key={i} src={att.data} controls style={{ maxWidth: 120, borderRadius: 6 }} />
-            ) : null
-          ))}
-        </div>
-        <button onClick={addEntry} style={{ background: '#71f7ff', color: '#181818', border: 'none', borderRadius: 6, padding: '0.6rem 1rem', fontWeight: 600, fontSize: '1em', cursor: 'pointer', alignSelf: 'flex-start', boxShadow: '0 0 4px #71f7ff' }}>
-          Add
+        <button onClick={addEntry} style={{ background: '#71f7ff', color: '#181818', border: 'none', borderRadius: '50%', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5em', fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 4px #71f7ff', marginLeft: 8 }} title="Add">
+          <span role="img" aria-label="Send">➤</span>
         </button>
+        <input id="journal-attachment-input" type="file" multiple accept="image/*,audio/*,video/*" style={{ display: 'none' }} onChange={handleAttachmentChange} />
+      </div>
+      {/* Centered attachment type selector over the main box */}
+      {showAttachmentPopup && (
+        <div style={{
+          position: 'absolute',
+          left: 12,
+          bottom: 60,
+          background: '#23272b',
+          borderRadius: 16,
+          boxShadow: '0 2px 16px #0008',
+          padding: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 0,
+          alignItems: 'flex-start',
+          zIndex: 20,
+          minWidth: 160,
+          border: '1px solid #333',
+        }}>
+          <button onClick={() => handleAttachmentType('image')} style={{
+            background: 'none',
+            border: 'none',
+            color: '#71f7ff',
+            fontSize: '1.15em',
+            padding: '10px 18px',
+            width: '100%',
+            textAlign: 'left',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            borderRadius: 12,
+            cursor: 'pointer',
+            transition: 'background 0.2s',
+          }}>
+            <span role="img" aria-label="Image">🖼️</span> Image
+          </button>
+          <button onClick={() => handleAttachmentType('audio')} style={{
+            background: 'none',
+            border: 'none',
+            color: '#71f7ff',
+            fontSize: '1.15em',
+            padding: '10px 18px',
+            width: '100%',
+            textAlign: 'left',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            borderRadius: 12,
+            cursor: 'pointer',
+            transition: 'background 0.2s',
+          }}>
+            <span role="img" aria-label="Audio">🎤</span> Record Audio
+          </button>
+          <button onClick={() => setShowAttachmentPopup(false)} style={{
+            background: 'none',
+            border: 'none',
+            color: '#ffd9e3',
+            fontSize: '1.1em',
+            padding: '10px 18px',
+            width: '100%',
+            textAlign: 'left',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            borderRadius: 12,
+            cursor: 'pointer',
+            marginTop: 2,
+            transition: 'background 0.2s',
+          }}>
+            <span role="img" aria-label="Cancel">❌</span> Cancel
+          </button>
+        </div>
+      )}
+      {/* Centered audio recorder over the main box */}
+      {showRecordPopup && (
+        <div style={{ position: 'absolute', left: '50%', top: '100%', transform: 'translate(-50%, 20px)', width: 260, background: '#222', borderRadius: 10, padding: 18, boxShadow: '0 0 8px #0ff2', display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', zIndex: 10 }}>
+          <span style={{ color: '#ffd9e3', fontWeight: 600, fontSize: '1.1em' }}>Record Audio</span>
+          {!recording && !audioURL && (
+            <button onClick={startRecording} style={{ background: '#71f7ff', color: '#181818', border: 'none', borderRadius: 6, padding: '0.5rem 1.2rem', fontWeight: 600, fontSize: '1em', cursor: 'pointer', width: '100%' }}>Start Recording</button>
+          )}
+          {recording && (
+            <button onClick={stopRecording} style={{ background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 6, padding: '0.5rem 1.2rem', fontWeight: 600, fontSize: '1em', cursor: 'pointer', width: '100%' }}>Stop Recording</button>
+          )}
+          {audioURL && !recording && (
+            <>
+              <audio src={audioURL} controls style={{ width: 200 }} />
+              <button onClick={saveAudioAttachment} style={{ background: '#71f7ff', color: '#181818', border: 'none', borderRadius: 6, padding: '0.5rem 1.2rem', fontWeight: 600, fontSize: '1em', cursor: 'pointer', width: '100%' }}>Save Audio</button>
+              <button onClick={() => { setShowRecordPopup(false); setAudioBlob(null); setAudioURL(null); }} style={{ background: 'none', color: '#ffd9e3', border: '1px solid #ffd9e3', borderRadius: 6, padding: '0.4rem 1.2rem', fontWeight: 600, fontSize: '1em', cursor: 'pointer', marginTop: 8, width: '100%' }}>Cancel</button>
+            </>
+          )}
+        </div>
+      )}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {attachmentPreviews.map((att, i) => (
+          att.type === 'image' ? (
+            <img key={i} src={att.data} alt={att.name} style={{ maxWidth: 80, maxHeight: 80, borderRadius: 6 }} />
+          ) : att.type === 'audio' ? (
+            <audio key={i} src={att.data} controls style={{ maxWidth: 120 }} />
+          ) : att.type === 'video' ? (
+            <video key={i} src={att.data} controls style={{ maxWidth: 120, borderRadius: 6 }} />
+          ) : null
+        ))}
       </div>
       <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
         {entries.length === 0 && <li style={{ color: '#888', textAlign: 'center', fontSize: '0.95em' }}>No journal entries yet.</li>}

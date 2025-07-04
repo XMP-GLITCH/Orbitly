@@ -15,8 +15,7 @@ function Header() {
         letterSpacing: '0.03em',
         fontWeight: 700,
         textShadow: '0 2px 8px #0ff2',
-      }}>
-        Orbitly
+      }}>Orbitly
       </h1>
     </header>
   );

@@ -1,22 +1,27 @@
 import { useState, useEffect, useRef } from 'react';
 import calendarSoundFile from './assets/mixkit-correct-answer-tone-2870.wav';
 
-function useLocalStorageState(key, defaultValue) {
+// Robust localStorageState hook
+function useRobustLocalStorageState(key, defaultValue, validate) {
   const [state, setState] = useState(() => {
     try {
       const stored = localStorage.getItem(key);
-      return stored ? JSON.parse(stored) : defaultValue;
-    } catch {
+      if (!stored) return defaultValue;
+      const parsed = JSON.parse(stored);
+      if (validate && !validate(parsed)) throw new Error('Corrupted data');
+      return parsed;
+    } catch (e) {
+      localStorage.removeItem(key);
       return defaultValue;
     }
   });
-
   useEffect(() => {
     try {
       localStorage.setItem(key, JSON.stringify(state));
-    } catch {}
+    } catch (e) {
+      alert('Failed to save calendar data. Local storage may be full or unavailable.');
+    }
   }, [key, state]);
-
   return [state, setState];
 }
 
@@ -42,7 +47,7 @@ function Calendar({ onClose }) {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() };
   });
-  const [events, setEvents] = useLocalStorageState('orbitly_calendar_events', {}); // <-- use custom hook
+  const [events, setEvents] = useRobustLocalStorageState('orbitly_calendar_events', {}, v => typeof v === 'object' && v !== null); // <-- use custom hook
   const [selectedDate, setSelectedDate] = useState(today);
   const [eventInput, setEventInput] = useState('');
   const [reminderChecked, setReminderChecked] = useState(false);
