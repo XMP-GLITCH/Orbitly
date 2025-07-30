@@ -13,6 +13,7 @@ function App() {
   const [openSection, setOpenSection] = useState(null); // null = show Welcome/Reminders
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [installError, setInstallError] = useState(null);
 
   useEffect(() => {
     const handler = (e) => {
@@ -26,19 +27,24 @@ function App() {
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setShowInstallBanner(false);
-      } else {
-        setTimeout(() => setShowInstallBanner(true), 2000);
+      try {
+        await deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          setShowInstallBanner(false);
+          setInstallError(null);
+        } else {
+          setTimeout(() => setShowInstallBanner(true), 2000);
+          setInstallError('Install was dismissed. Try again or use your browser menu.');
+        }
+      } catch (err) {
+        setInstallError('Install prompt failed. Try using your browser menu.');
       }
-      setDeferredPrompt(null); // Only clear after prompt
+      setDeferredPrompt(null);
     } else {
-      // Fallback: try to open native install prompt if available
-      if (window.matchMedia('(display-mode: browser)').matches && window.navigator.standalone !== true) {
-        window.location.reload(); // reload to re-trigger beforeinstallprompt if possible
-      }
+      setInstallError('Install not available. Try using your browser menu.');
+      // Optionally reload to re-trigger beforeinstallprompt
+      // window.location.reload();
     }
   };
 
@@ -174,7 +180,7 @@ function App() {
               cursor: 'pointer',
               boxShadow: '0 0 4px #0ff2',
             }}>Install</button>
-            <button onClick={() => setShowInstallBanner(false)} style={{
+            <button onClick={() => { setShowInstallBanner(false); setInstallError(null); }} style={{
               marginLeft: 10,
               background: 'none',
               color: '#ffd9e3',
@@ -185,6 +191,9 @@ function App() {
               fontSize: '1em',
               cursor: 'pointer',
             }}>Dismiss</button>
+            {installError && (
+              <div style={{ color: '#ff6b81', marginTop: 10, fontSize: '0.95em' }}>{installError}</div>
+            )}
           </div>
         )}
         {!openSection && (
