@@ -11,6 +11,7 @@ function Journal() {
       return parsed;
     } catch (e) {
       localStorage.removeItem('orbitly_journal_entries');
+      window.alert('Your journal data was lost or deleted. This may be due to browser settings, incognito mode, or clearing site data. For best results, use Orbitly in regular mode and avoid clearing site data.');
       return [];
     }
   });

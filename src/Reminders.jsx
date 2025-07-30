@@ -15,6 +15,7 @@ function Reminders() {
       return parsed;
     } catch (e) {
       localStorage.removeItem('orbitly_reminders');
+      window.alert('Your reminders data was lost or deleted. This may be due to browser settings, incognito mode, or clearing site data. For best results, use Orbitly in regular mode and avoid clearing site data.');
       return [];
     }
   });

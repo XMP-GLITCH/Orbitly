@@ -29,6 +29,7 @@ function Schedule({ onClose }) {
       } catch {
         localStorage.removeItem('orbitly_daily');
         setDaily([]);
+        window.alert('Your daily schedule data was lost or deleted. This may be due to browser settings, incognito mode, or clearing site data. For best results, use Orbitly in regular mode and avoid clearing site data.');
       }
     }
     if (w) {
@@ -41,6 +42,7 @@ function Schedule({ onClose }) {
         setWeekly({
           Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [], Saturday: [], Sunday: []
         });
+        window.alert('Your weekly schedule data was lost or deleted. This may be due to browser settings, incognito mode, or clearing site data. For best results, use Orbitly in regular mode and avoid clearing site data.');
       }
     }
   }, []);

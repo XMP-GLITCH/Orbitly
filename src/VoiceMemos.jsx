@@ -13,6 +13,7 @@ function VoiceMemos() {
       return parsed;
     } catch (e) {
       localStorage.removeItem('orbitly_voice_memos');
+      window.alert('Your voice memos data was lost or deleted. This may be due to browser settings, incognito mode, or clearing site data. For best results, use Orbitly in regular mode and avoid clearing site data.');
       return [];
     }
   });
