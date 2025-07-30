@@ -194,6 +194,17 @@ function App() {
             {installError && (
               <div style={{ color: '#ff6b81', marginTop: 10, fontSize: '0.95em' }}>{installError}</div>
             )}
+            {installError === 'Install not available. Try using your browser menu.' && (
+              <div style={{ color: '#ffd700', marginTop: 18, fontSize: '1em', background: '#222', borderRadius: 8, padding: '0.7em 0.5em' }}>
+                <strong>How to install Orbitly in Chrome:</strong>
+                <ol style={{ textAlign: 'left', margin: '0.7em auto', maxWidth: 340 }}>
+                  <li>Click the <span style={{fontWeight:'bold'}}>three dots</span> menu in the top-right of Chrome.</li>
+                  <li>Look for <span style={{fontWeight:'bold'}}>"Install App"</span> or <span style={{fontWeight:'bold'}}>"Add to Home Screen"</span>.</li>
+                  <li>Follow the prompts to install Orbitly as a native app.</li>
+                </ol>
+                <div style={{marginTop:'0.5em',fontSize:'0.95em',color:'#71f7ff'}}>After install, Orbitly will launch as a standalone app from your desktop or home screen.</div>
+              </div>
+            )}
           </div>
         )}
         {!openSection && (
