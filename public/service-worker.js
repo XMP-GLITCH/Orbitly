@@ -4,9 +4,10 @@ const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/Picsart_25-05-26_23-07-56-664 (1).png',
+  // Main CSS and JS
   '/src/App.css',
   '/src/index.css',
+  '/src/main.jsx',
   '/src/App.jsx',
   '/src/Calendar.jsx',
   '/src/Journal.jsx',
@@ -15,7 +16,10 @@ const urlsToCache = [
   '/src/VoiceMemos.jsx',
   '/src/Welcome.jsx',
   '/src/Header.jsx',
-  // Add more assets as needed
+  // All assets in src/assets
+  '/src/assets/orbitly-reminder.mp3',
+  '/src/assets/react.svg',
+  '/src/assets/Untitled_design__2_-removebg-preview.png',
 ];
 
 self.addEventListener('install', event => {
@@ -66,9 +70,9 @@ self.addEventListener('fetch', event => {
         if (event.request.mode === 'navigate') {
           return caches.match('/index.html');
         }
-        // Fallback: for static assets, try to serve a fallback asset or nothing
+        // Fallback: for static assets, try to serve a fallback asset or default image
         if (event.request.destination === 'image') {
-          return new Response('', { status: 404 });
+          return caches.match('/src/assets/Untitled_design__2_-removebg-preview.png') || new Response('', { status: 404 });
         }
         if (event.request.destination === 'style' || event.request.destination === 'script') {
           return new Response('', { status: 404 });
