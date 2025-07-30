@@ -11,42 +11,6 @@ import './App.css';
 function App() {
   // Set null as the default section so Welcome/Reminders show immediately
   const [openSection, setOpenSection] = useState(null); // null = show Welcome/Reminders
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [showInstallBanner, setShowInstallBanner] = useState(false);
-  const [installError, setInstallError] = useState(null);
-
-  useEffect(() => {
-    const handler = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setShowInstallBanner(true);
-    };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
-
-  const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      try {
-        await deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-          setShowInstallBanner(false);
-          setInstallError(null);
-        } else {
-          setTimeout(() => setShowInstallBanner(true), 2000);
-          setInstallError('Install was dismissed. Try again or use your browser menu.');
-        }
-      } catch (err) {
-        setInstallError('Install prompt failed. Try using your browser menu.');
-      }
-      setDeferredPrompt(null);
-    } else {
-      setInstallError('Install not available. Try using your browser menu.');
-      // Optionally reload to re-trigger beforeinstallprompt
-      // window.location.reload();
-    }
-  };
 
   const buttonStyle = {
     padding: '0.5rem 1rem',
@@ -119,19 +83,6 @@ function App() {
     );
   }
 
-  // Always prompt for install if not installed
-  useEffect(() => {
-    let intervalId;
-    if (!window.matchMedia('(display-mode: standalone)').matches && !window.navigator.standalone) {
-      intervalId = setInterval(() => {
-        if (!showInstallBanner && !window.matchMedia('(display-mode: standalone)').matches && !window.navigator.standalone) {
-          setShowInstallBanner(true);
-        }
-      }, 15000); // re-prompt every 15 seconds if dismissed
-    }
-    return () => intervalId && clearInterval(intervalId);
-  }, [showInstallBanner]);
-
   return (
     <div style={{
       minHeight: '100vh',
@@ -155,58 +106,6 @@ function App() {
         display: 'flex',
         flexDirection: 'column',
       }}>
-        {showInstallBanner && (
-          <div style={{
-            background: '#181818',
-            border: '1px solid #333',
-            borderRadius: 10,
-            color: '#71f7ff',
-            padding: '1em',
-            marginBottom: 16,
-            textAlign: 'center',
-            boxShadow: '0 0 8px #0ff2',
-            zIndex: 1000,
-          }}>
-            <strong>Install Orbitly for a native app experience!</strong><br />
-            <button onClick={handleInstallClick} style={{
-              marginTop: 10,
-              background: '#71f7ff',
-              color: '#181818',
-              border: 'none',
-              borderRadius: 8,
-              padding: '0.5em 1.2em',
-              fontWeight: 600,
-              fontSize: '1em',
-              cursor: 'pointer',
-              boxShadow: '0 0 4px #0ff2',
-            }}>Install</button>
-            <button onClick={() => { setShowInstallBanner(false); setInstallError(null); }} style={{
-              marginLeft: 10,
-              background: 'none',
-              color: '#ffd9e3',
-              border: '1px solid #333',
-              borderRadius: 8,
-              padding: '0.5em 1.2em',
-              fontWeight: 600,
-              fontSize: '1em',
-              cursor: 'pointer',
-            }}>Dismiss</button>
-            {installError && (
-              <div style={{ color: '#ff6b81', marginTop: 10, fontSize: '0.95em' }}>{installError}</div>
-            )}
-            {installError === 'Install not available. Try using your browser menu.' && (
-              <div style={{ color: '#ffd700', marginTop: 18, fontSize: '1em', background: '#222', borderRadius: 8, padding: '0.7em 0.5em' }}>
-                <strong>How to install Orbitly in Chrome:</strong>
-                <ol style={{ textAlign: 'left', margin: '0.7em auto', maxWidth: 340 }}>
-                  <li>Click the <span style={{fontWeight:'bold'}}>three dots</span> menu in the top-right of Chrome.</li>
-                  <li>Look for <span style={{fontWeight:'bold'}}>"Install App"</span> or <span style={{fontWeight:'bold'}}>"Add to Home Screen"</span>.</li>
-                  <li>Follow the prompts to install Orbitly as a native app.</li>
-                </ol>
-                <div style={{marginTop:'0.5em',fontSize:'0.95em',color:'#71f7ff'}}>After install, Orbitly will launch as a standalone app from your desktop or home screen.</div>
-              </div>
-            )}
-          </div>
-        )}
         {!openSection && (
           <>
             <div style={{textAlign: 'center'}}>
