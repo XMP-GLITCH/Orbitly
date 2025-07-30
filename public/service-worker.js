@@ -15,7 +15,6 @@ const urlsToCache = [
   '/src/VoiceMemos.jsx',
   '/src/Welcome.jsx',
   '/src/Header.jsx',
-  '/src/assets/mixkit-urgent-simple-tone-loop-2976.wav',
   // Add more assets as needed
 ];
 

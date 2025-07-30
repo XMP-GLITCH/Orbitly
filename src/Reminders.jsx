@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import aggressiveSoundFile from './assets/mixkit-urgent-simple-tone-loop-2976.wav';
 
 function Reminders() {
   const [showDateTime, setShowDateTime] = useState(false);
