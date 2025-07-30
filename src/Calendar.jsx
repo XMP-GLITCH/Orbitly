@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import calendarSoundFile from './assets/mixkit-correct-answer-tone-2870.wav';
 
 // Robust localStorageState hook
 function useRobustLocalStorageState(key, defaultValue, validate) {

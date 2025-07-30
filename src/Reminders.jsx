@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import standardSoundFile from './assets/mixkit-correct-answer-tone-2870.wav';
 import aggressiveSoundFile from './assets/mixkit-urgent-simple-tone-loop-2976.wav';
 
 function Reminders() {
